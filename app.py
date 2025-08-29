@@ -99,7 +99,7 @@ def load_data():
         admin_credentials = {
             'admin@political.com': {
                 'id': str(uuid.uuid4()),
-                'password': generate_password_hash('admin123'),
+                'password': generate_password_hash('admin123', method='sha256'),
                 'role': 'admin',
                 'created_at': datetime.utcnow().isoformat()
             }
@@ -351,7 +351,7 @@ def register():
             'email': data['email'],
             'phone': data['phone'],
             'location': data['location'],
-            'password': generate_password_hash(data['password']),
+            'password': generate_password_hash(data['password'], method='sha256'),
             'status': 'pending',
             'adhar_front': None,
             'adhar_back': None,
