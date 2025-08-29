@@ -1,7 +1,4 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, g
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from flask_mail import Mail, Message
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
@@ -53,15 +50,9 @@ class Config:
 
 app.config.from_object(Config)
 
-# Initialize extensions
-mail = Mail(app)
-
-# Rate limiting
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
-)
-limiter.init_app(app)
+# Initialize extensions (simplified for deployment)
+# mail = Mail(app)  # Disabled for deployment
+# limiter = Limiter(...)  # Disabled for deployment
 
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -279,7 +270,7 @@ def test_session():
     return jsonify(session_info)
 
 @app.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
+# @limiter.limit("5 per minute")  # Disabled for deployment
 def login():
     if request.method == 'POST':
         try:
@@ -329,7 +320,7 @@ def login():
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
-@limiter.limit("3 per minute")
+# @limiter.limit("3 per minute")  # Disabled for deployment
 def register():
     if request.method == 'POST':
         schema = UserRegistrationSchema()
@@ -377,7 +368,7 @@ def register():
     return render_template('register.html')
 
 @app.route('/upload_documents/<user_id>', methods=['GET', 'POST'])
-@limiter.limit("10 per hour")
+# @limiter.limit("10 per hour")  # Disabled for deployment
 def upload_documents(user_id):
     user = None
     for u in users_db.values():
@@ -575,8 +566,8 @@ def approve_user(user_id):
         
         log_activity('user_approved', f'User {user["email"]} approved by admin', user_id)
         
-        # Send approval email
-        send_approval_email(user['email'], user['name'], 'approved')
+        # Send approval email (disabled for deployment)
+        # send_approval_email(user['email'], user['name'], 'approved')
         
         flash(f'User {user["name"]} approved successfully!')
     
@@ -598,8 +589,8 @@ def reject_user(user_id):
         
         log_activity('user_rejected', f'User {user["email"]} rejected by admin', user_id)
         
-        # Send rejection email
-        send_approval_email(user['email'], user['name'], 'rejected')
+        # Send rejection email (disabled for deployment)
+        # send_approval_email(user['email'], user['name'], 'rejected')
         
         flash(f'User {user["name"]} rejected!')
     
@@ -922,39 +913,10 @@ def generate_qr_code(event_title):
     return filename
 
 def send_approval_email(email, name, status):
-    """Send email notification for user approval/rejection"""
-    try:
-        subject = f"Account {status.title()} - Political Events System"
-        
-        if status == 'approved':
-            body = f"""
-            Dear {name},
-            
-            Congratulations! Your account has been approved.
-            You can now log in and participate in political events.
-            
-            Login at: http://localhost:5000/login
-            
-            Best regards,
-            Political Events Team
-            """
-        else:
-            body = f"""
-            Dear {name},
-            
-            We regret to inform you that your account application has been rejected.
-            Please contact the administrator for more information.
-            
-            Best regards,
-            Political Events Team
-            """
-        
-        msg = Message(subject=subject, recipients=[email], body=body)
-        mail.send(msg)
-        
-        logger.info(f"Email sent to {email} for {status}")
-    except Exception as e:
-        logger.error(f"Failed to send email to {email}: {e}")
+    """Send email notification for user approval/rejection (disabled for deployment)"""
+    # Email functionality disabled for deployment
+    logger.info(f"Email would be sent to {email} for {status} (disabled)")
+    pass
 
 if __name__ == '__main__':
     print("=" * 60)
