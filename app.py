@@ -105,6 +105,7 @@ def load_data():
             }
         }
         save_admin(admin_credentials)
+        print(f"DEBUG: Admin credentials created with password hash: {admin_credentials['admin@political.com']['password']}")
     
     try:
         with open(ACTIVITIES_FILE, 'rb') as f:
@@ -268,6 +269,16 @@ def test_session():
         'all_session_data': dict(session)
     }
     return jsonify(session_info)
+
+@app.route('/test_admin')
+def test_admin():
+    """Test route to check admin credentials"""
+    admin_info = {
+        'admin_exists': 'admin@political.com' in admin_credentials,
+        'admin_password_hash': admin_credentials.get('admin@political.com', {}).get('password', 'NOT_FOUND'),
+        'password_check': check_password_hash(admin_credentials.get('admin@political.com', {}).get('password', ''), 'admin123') if 'admin@political.com' in admin_credentials else False
+    }
+    return jsonify(admin_info)
 
 @app.route('/login', methods=['GET', 'POST'])
 # @limiter.limit("5 per minute")  # Disabled for deployment
