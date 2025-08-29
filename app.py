@@ -13,6 +13,12 @@ import qrcode
 from cryptography.fernet import Fernet
 import bleach
 from marshmallow import Schema, fields, validate, validates_schema, ValidationError
+from dotenv import load_dotenv
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -27,11 +33,19 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Database Configuration
+db = SQLAlchemy()
+migrate = Migrate()
+
 # Production Configuration
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'production-secret-key-change-this')
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'secure_uploads')
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5MB max file size
+    
+    # Database Configuration
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///political_platform.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # JWT Configuration
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-key-change-this')
@@ -47,8 +61,75 @@ class Config:
     
     # Encryption key for file storage
     ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key())
+    
+    # Hyperverge KYC API
+    HYPERVERGE_API_KEY = os.environ.get('HYPERVERGE_API_KEY')
+    HYPERVERGE_API_SECRET = os.environ.get('HYPERVERGE_API_SECRET')
+    
+    # WhatsApp Business API
+    WHATSAPP_API_KEY = os.environ.get('WHATSAPP_API_KEY')
+    WHATSAPP_API_SECRET = os.environ.get('WHATSAPP_API_SECRET')
+    WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID')
+    WHATSAPP_ACCESS_TOKEN = os.environ.get('WHATSAPP_ACCESS_TOKEN')
+    
+    # Razorpay Payment Gateway
+    RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID')
+    RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET')
+    RAZORPAY_WEBHOOK_SECRET = os.environ.get('RAZORPAY_WEBHOOK_SECRET')
+    
+    # Google Maps API
+    GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
+    
+    # Freshdesk CRM
+    FRESHDESK_API_KEY = os.environ.get('FRESHDESK_API_KEY')
+    FRESHDESK_DOMAIN = os.environ.get('FRESHDESK_DOMAIN')
+    
+    # Redis Configuration
+    REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    
+    # Commission Rates
+    PLATFORM_COMMISSION_RATE = float(os.environ.get('PLATFORM_COMMISSION_RATE', 0.05))
+    GATEWAY_COMMISSION_RATE = float(os.environ.get('GATEWAY_COMMISSION_RATE', 0.02))
+    PAYOUT_COMMISSION_RATE = float(os.environ.get('PAYOUT_COMMISSION_RATE', 0.01))
+    
+    # OTP Configuration
+    OTP_EXPIRY_MINUTES = int(os.environ.get('OTP_EXPIRY_MINUTES', 10))
+    OTP_LENGTH = int(os.environ.get('OTP_LENGTH', 6))
+    
+    # Auto Matcher Configuration
+    AUTO_MATCH_RADIUS_KM = float(os.environ.get('AUTO_MATCH_RADIUS_KM', 50))
+    AUTO_MATCH_SCORE_THRESHOLD = float(os.environ.get('AUTO_MATCH_SCORE_THRESHOLD', 0.7))
+    
+    # Political Party Email Domains
+    POLITICAL_PARTY_DOMAINS = os.environ.get('POLITICAL_PARTY_DOMAINS', 'dmk.in,aiadmk.in,bjp.org,inc.in').split(',')
+    
+    # File Upload Configuration
+    MAX_FILE_SIZE = int(os.environ.get('MAX_FILE_SIZE', 10485760))  # 10MB
+    ALLOWED_EXTENSIONS = os.environ.get('ALLOWED_EXTENSIONS', 'jpg,jpeg,png,pdf').split(',')
+    
+    # Security Configuration
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+    SESSION_COOKIE_HTTPONLY = os.environ.get('SESSION_COOKIE_HTTPONLY', 'True').lower() == 'true'
+    PERMANENT_SESSION_LIFETIME = int(os.environ.get('PERMANENT_SESSION_LIFETIME', 3600))
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+
+class ProductionConfig(Config):
+    DEBUG = False
+
+class TestingConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
 
 app.config.from_object(Config)
+
+# Initialize database
+db.init_app(app)
+migrate.init_app(app, db)
+
+# Import database models
+from models import *
 
 # Initialize extensions (simplified for deployment)
 # mail = Mail(app)  # Disabled for deployment
@@ -929,16 +1010,315 @@ def send_approval_email(email, name, status):
     logger.info(f"Email would be sent to {email} for {status} (disabled)")
     pass
 
+# ============================================================================
+# NEW FEATURE API ROUTES
+# ============================================================================
+
+# Import service classes
+from services.kyc_service import HypervergeKYC
+from services.email_verification import PoliticalPartyVerification
+from services.whatsapp_service import WhatsAppService, WhatsAppGroupService
+from services.payment_service import RazorpayService, CommissionService
+from services.crm_service import FreshdeskCRM
+from services.auto_matcher import AutoMatcher
+from services.maps_service import GoogleMapsService
+
+# Initialize services
+kyc_service = HypervergeKYC()
+party_verification = PoliticalPartyVerification()
+whatsapp_service = WhatsAppService()
+whatsapp_group_service = WhatsAppGroupService()
+payment_service = RazorpayService()
+commission_service = CommissionService()
+crm_service = FreshdeskCRM()
+auto_matcher = AutoMatcher()
+maps_service = GoogleMapsService()
+
+# KYC Verification Routes
+@app.route('/api/kyc/verify', methods=['POST'])
+def kyc_verify():
+    """Verify KYC documents using Hyperverge"""
+    try:
+        data = request.get_json()
+        front_image_path = data.get('front_image_path')
+        back_image_path = data.get('back_image_path')
+        selfie_path = data.get('selfie_path')
+        
+        if not all([front_image_path, back_image_path, selfie_path]):
+            return jsonify({'success': False, 'error': 'All document images required'}), 400
+        
+        result = kyc_service.verify_documents(front_image_path, back_image_path, selfie_path)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"KYC verification error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/kyc/status/<user_id>', methods=['GET'])
+def kyc_status(user_id):
+    """Get KYC verification status for a user"""
+    try:
+        # This would typically query the database
+        # For now, return a placeholder response
+        return jsonify({
+            'success': True,
+            'user_id': user_id,
+            'kyc_status': 'pending',
+            'verification_score': 0.0
+        })
+    
+    except Exception as e:
+        logger.error(f"KYC status error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# WhatsApp Routes
+@app.route('/api/whatsapp/send-otp', methods=['POST'])
+def send_whatsapp_otp():
+    """Send OTP via WhatsApp"""
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+        
+        if not phone_number:
+            return jsonify({'success': False, 'error': 'Phone number required'}), 400
+        
+        result = whatsapp_service.send_otp(phone_number)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"WhatsApp OTP error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/whatsapp/verify-otp', methods=['POST'])
+def verify_whatsapp_otp():
+    """Verify OTP sent via WhatsApp"""
+    try:
+        data = request.get_json()
+        phone_number = data.get('phone_number')
+        otp = data.get('otp')
+        
+        if not all([phone_number, otp]):
+            return jsonify({'success': False, 'error': 'Phone number and OTP required'}), 400
+        
+        result = whatsapp_service.verify_otp(phone_number, otp)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"WhatsApp OTP verification error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/whatsapp/create-group', methods=['POST'])
+def create_whatsapp_group():
+    """Create WhatsApp group for event coordination"""
+    try:
+        data = request.get_json()
+        group_name = data.get('group_name')
+        event_id = data.get('event_id')
+        admin_phone = data.get('admin_phone')
+        
+        if not all([group_name, event_id, admin_phone]):
+            return jsonify({'success': False, 'error': 'Group name, event ID, and admin phone required'}), 400
+        
+        result = whatsapp_group_service.create_group(group_name, admin_phone)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"WhatsApp group creation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Payment Routes
+@app.route('/api/payments/create-order', methods=['POST'])
+def create_payment_order():
+    """Create Razorpay payment order"""
+    try:
+        data = request.get_json()
+        amount = data.get('amount')
+        currency = data.get('currency', 'INR')
+        receipt = data.get('receipt')
+        
+        if not amount:
+            return jsonify({'success': False, 'error': 'Amount required'}), 400
+        
+        result = payment_service.create_order(amount, currency, receipt)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Payment order creation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/payments/verify', methods=['POST'])
+def verify_payment():
+    """Verify Razorpay payment signature"""
+    try:
+        data = request.get_json()
+        payment_id = data.get('payment_id')
+        order_id = data.get('order_id')
+        signature = data.get('signature')
+        
+        if not all([payment_id, order_id, signature]):
+            return jsonify({'success': False, 'error': 'Payment ID, order ID, and signature required'}), 400
+        
+        result = payment_service.verify_payment(payment_id, order_id, signature)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Payment verification error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/payments/payout', methods=['POST'])
+def create_payout():
+    """Create automated payout for volunteers"""
+    try:
+        data = request.get_json()
+        amount = data.get('amount')
+        account_number = data.get('account_number')
+        ifsc_code = data.get('ifsc_code')
+        name = data.get('name')
+        
+        if not all([amount, account_number, ifsc_code, name]):
+            return jsonify({'success': False, 'error': 'All payout details required'}), 400
+        
+        result = payment_service.create_payout(amount, account_number, ifsc_code, name)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Payout creation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# CRM Support Routes
+@app.route('/api/support/ticket', methods=['POST'])
+def create_support_ticket():
+    """Create support ticket in Freshdesk"""
+    try:
+        data = request.get_json()
+        subject = data.get('subject')
+        description = data.get('description')
+        email = data.get('email')
+        priority = data.get('priority', 1)
+        
+        if not all([subject, description, email]):
+            return jsonify({'success': False, 'error': 'Subject, description, and email required'}), 400
+        
+        result = crm_service.create_ticket(subject, description, email, priority)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Support ticket creation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/support/tickets', methods=['GET'])
+def get_support_tickets():
+    """Get all support tickets"""
+    try:
+        result = crm_service.get_tickets()
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Get support tickets error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Auto Matcher Routes
+@app.route('/api/matching/volunteers/<event_id>', methods=['GET'])
+def get_matching_volunteers(event_id):
+    """Get volunteers that match an event"""
+    try:
+        result = auto_matcher.find_matching_volunteers(event_id)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Volunteer matching error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/matching/auto-assign', methods=['POST'])
+def auto_assign_volunteers():
+    """Automatically assign volunteers to events"""
+    try:
+        data = request.get_json()
+        event_id = data.get('event_id')
+        
+        if not event_id:
+            return jsonify({'success': False, 'error': 'Event ID required'}), 400
+        
+        result = auto_matcher.auto_assign_volunteers(event_id)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Auto assignment error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Google Maps Routes
+@app.route('/api/maps/geocode', methods=['POST'])
+def geocode_address():
+    """Geocode an address using Google Maps"""
+    try:
+        data = request.get_json()
+        address = data.get('address')
+        
+        if not address:
+            return jsonify({'success': False, 'error': 'Address required'}), 400
+        
+        result = maps_service.geocode_address(address)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Geocoding error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/maps/distance', methods=['POST'])
+def calculate_distance():
+    """Calculate distance between two points"""
+    try:
+        data = request.get_json()
+        origin = data.get('origin')
+        destination = data.get('destination')
+        
+        if not all([origin, destination]):
+            return jsonify({'success': False, 'error': 'Origin and destination required'}), 400
+        
+        result = maps_service.calculate_distance(origin, destination)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Distance calculation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/maps/event-map/<event_id>', methods=['GET'])
+def get_event_map(event_id):
+    """Get map with event and volunteer locations"""
+    try:
+        result = maps_service.create_event_map(event_id)
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Event map creation error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Terms and Conditions Route
+@app.route('/terms')
+def terms_conditions():
+    """Display terms and conditions"""
+    return render_template('terms_conditions.html')
+
 if __name__ == '__main__':
-    print("=" * 60)
-    print("🚀 ENHANCED PRODUCTION POLITICAL EVENT MANAGEMENT SYSTEM")
-    print("=" * 60)
+    print("=" * 80)
+    print("🚀 COMPREHENSIVE POLITICAL EVENT MANAGEMENT SYSTEM WITH ALL FEATURES")
+    print("=" * 80)
     print("✅ Admin Login: admin@political.com / admin123")
-    print("✅ Database: Persistent file-based storage")
-    print("✅ Security: JWT, Rate limiting, Input validation, File encryption")
-    print("✅ Features: Activity logging, Email notifications, Admin history")
+    print("✅ Database: SQLAlchemy with migration support")
+    print("✅ Security: JWT, Input validation, File encryption")
+    print("✅ Core Features: Activity logging, Admin history, Event management")
+    print("✅ NEW FEATURES IMPLEMENTED:")
+    print("   🔐 KYC Verification (Hyperverge)")
+    print("   🏛️  Political Party Email Verification")
+    print("   📱 WhatsApp OTP & Group Management")
+    print("   💳 Razorpay Payment Integration")
+    print("   🎫 Freshdesk CRM Support")
+    print("   🤖 Auto Matcher/Scheduler")
+    print("   💰 Commission Logic")
+    print("   🗺️  Google Maps Integration")
+    print("   📋 Terms & Conditions")
     print("✅ Server starting at http://127.0.0.1:5000")
-    print("=" * 60)
+    print("=" * 80)
     
     # For production deployment
     port = int(os.environ.get('PORT', 5000))
