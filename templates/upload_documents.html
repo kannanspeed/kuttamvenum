@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Documents - Political Event Management{% endblock %}
+
+{% block content %}
+<div class="upload-container" style="min-height: 80vh; padding: 40px 0;">
+    <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <div class="text-center mb-4">
+            <i class="fas fa-upload" style="font-size: 3rem; color: #667eea; margin-bottom: 20px;"></i>
+            <h2 style="color: #333; margin-bottom: 10px;">Upload Documents</h2>
+            <p style="color: #666;">Please upload your documents for verification</p>
+        </div>
+
+        <div class="user-info mb-4" style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 10px;">
+            <h4 style="color: #667eea; margin-bottom: 15px;">
+                <i class="fas fa-user"></i> User Information
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div>
+                    <strong>Name:</strong> {{ user.name }}
+                </div>
+                <div>
+                    <strong>Email:</strong> {{ user.email }}
+                </div>
+                <div>
+                    <strong>Phone:</strong> {{ user.phone }}
+                </div>
+                <div>
+                    <strong>Location:</strong> {{ user.location }}
+                </div>
+            </div>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-id-card"></i> Aadhaar Card (Front Side)
+                </label>
+                <div class="file-upload">
+                    <input type="file" name="adhar_front" accept="image/*" required>
+                    <label class="file-upload-label">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <br>
+                        Click to upload Aadhaar card front side
+                        <br>
+                        <small style="opacity: 0.7;">JPG, PNG, GIF (Max 5MB)</small>
+                    </label>
+                </div>
+                <div class="image-preview mt-2"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-id-card"></i> Aadhaar Card (Back Side)
+                </label>
+                <div class="file-upload">
+                    <input type="file" name="adhar_back" accept="image/*" required>
+                    <label class="file-upload-label">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <br>
+                        Click to upload Aadhaar card back side
+                        <br>
+                        <small style="opacity: 0.7;">JPG, PNG, GIF (Max 5MB)</small>
+                    </label>
+                </div>
+                <div class="image-preview mt-2"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-camera"></i> Selfie Photo
+                </label>
+                <div class="file-upload">
+                    <input type="file" name="selfie" accept="image/*" required>
+                    <label class="file-upload-label">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <br>
+                        Click to upload your selfie
+                        <br>
+                        <small style="opacity: 0.7;">JPG, PNG, GIF (Max 5MB)</small>
+                    </label>
+                </div>
+                <div class="image-preview mt-2"></div>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-upload"></i> Upload Documents
+                </button>
+            </div>
+        </form>
+
+        <!-- Document Guidelines -->
+        <div class="guidelines mt-4" style="background: rgba(255, 193, 7, 0.1); padding: 20px; border-radius: 10px; border-left: 4px solid #ffc107;">
+            <h4 style="color: #856404; margin-bottom: 15px; font-size: 1rem;">
+                <i class="fas fa-info-circle"></i> Document Guidelines
+            </h4>
+            <div style="font-size: 0.9rem; color: #856404;">
+                <ul style="padding-left: 20px; margin: 0;">
+                    <li>Ensure Aadhaar card images are clear and all details are visible</li>
+                    <li>Selfie should be recent and clearly show your face</li>
+                    <li>All documents must be in JPG, PNG, or GIF format</li>
+                    <li>Maximum file size: 5MB per document</li>
+                    <li>Documents will be reviewed by admin within 24 hours</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Privacy Notice -->
+        <div class="privacy-notice mt-4" style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 10px;">
+            <h4 style="color: #667eea; margin-bottom: 15px; font-size: 1rem;">
+                <i class="fas fa-shield-alt"></i> Privacy & Security
+            </h4>
+            <div style="font-size: 0.9rem; color: #666;">
+                <p style="margin-bottom: 10px;">
+                    Your documents are encrypted and stored securely. They are only used for verification purposes 
+                    and will not be shared with third parties without your consent.
+                </p>
+                <p style="margin: 0;">
+                    <strong>Note:</strong> Providing false documents may result in account suspension.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.upload-container {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 20px;
+    margin: 20px;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.form-label {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.form-label i {
+    margin-right: 8px;
+    color: #667eea;
+}
+
+.file-upload-label {
+    display: block;
+    padding: 30px;
+    border: 2px dashed #667eea;
+    border-radius: 10px;
+    text-align: center;
+    color: #667eea;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: rgba(102, 126, 234, 0.05);
+    cursor: pointer;
+}
+
+.file-upload:hover .file-upload-label {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #764ba2;
+}
+
+.file-upload-label i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.user-info {
+    border-left: 4px solid #667eea;
+}
+
+.user-info strong {
+    color: #333;
+}
+
+@media (max-width: 480px) {
+    .upload-container {
+        margin: 10px;
+    }
+    
+    .card {
+        padding: 20px;
+    }
+    
+    .user-info {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// File upload preview functionality
+document.querySelectorAll('input[type="file"]').forEach(input => {
+    input.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Show file name
+            const label = this.parentNode.querySelector('.file-upload-label');
+            if (label) {
+                label.innerHTML = `
+                    <i class="fas fa-check-circle" style="color: #56ab2f;"></i>
+                    <br>
+                    Selected: ${file.name}
+                    <br>
+                    <small style="opacity: 0.7;">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                `;
+            }
+            
+            // Preview image if it's an image file
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewContainer = input.parentNode.parentNode.querySelector('.image-preview');
+                    if (previewContainer) {
+                        previewContainer.innerHTML = `
+                            <img src="${e.target.result}" style="max-width: 200px; max-height: 200px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        `;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    });
+});
+
+// File size validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const fileInputs = this.querySelectorAll('input[type="file"]');
+    let isValid = true;
+    
+    fileInputs.forEach(input => {
+        const file = input.files[0];
+        if (file && file.size > 5 * 1024 * 1024) { // 5MB limit
+            alert(`File ${file.name} is too large. Maximum size is 5MB.`);
+            isValid = false;
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}
+

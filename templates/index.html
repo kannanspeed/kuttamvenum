@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - Political Event Management{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section text-center" style="padding: 80px 0; color: white;">
+    <div class="container">
+        <h1 class="mb-3" style="font-size: 3.5rem; font-weight: bold; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+            Political Event Management System
+        </h1>
+        <p class="mb-4" style="font-size: 1.3rem; opacity: 0.9; max-width: 600px; margin: 0 auto;">
+            Streamline political events with secure user verification, QR code check-ins, and real-time attendance tracking.
+        </p>
+        <div class="hero-buttons">
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg" style="margin-right: 15px;">
+                <i class="fas fa-user-plus"></i> Get Started
+            </a>
+            <a href="{{ url_for('login') }}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section" style="padding: 60px 0;">
+    <div class="container">
+        <h2 class="text-center mb-5" style="color: white; font-size: 2.5rem; font-weight: bold;">
+            Key Features
+        </h2>
+        
+        <div class="grid-3">
+            <!-- Feature 1 -->
+            <div class="card text-center">
+                <div class="mb-3">
+                    <i class="fas fa-shield-alt" style="font-size: 3rem; color: #667eea;"></i>
+                </div>
+                <h3 style="color: #333; margin-bottom: 15px;">Secure Verification</h3>
+                <p style="color: #666;">
+                    Upload Aadhaar card and selfie for secure user verification. Admin approval ensures authenticity.
+                </p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="card text-center">
+                <div class="mb-3">
+                    <i class="fas fa-qrcode" style="font-size: 3rem; color: #667eea;"></i>
+                </div>
+                <h3 style="color: #333; margin-bottom: 15px;">QR Code Check-in</h3>
+                <p style="color: #666;">
+                    Unique QR codes for each event. Quick and secure check-in process for attendees.
+                </p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="card text-center">
+                <div class="mb-3">
+                    <i class="fas fa-chart-line" style="font-size: 3rem; color: #667eea;"></i>
+                </div>
+                <h3 style="color: #333; margin-bottom: 15px;">Real-time Analytics</h3>
+                <p style="color: #666;">
+                    Live attendance tracking and analytics. Monitor event success in real-time.
+                </p>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="card text-center">
+                <div class="mb-3">
+                    <i class="fas fa-calendar-plus" style="font-size: 3rem; color: #667eea;"></i>
+                </div>
+                <h3 style="color: #333; margin-bottom: 15px;">Event Management</h3>
+                <p style="color: #666;">
+                    Create and manage political events with detailed information and party affiliations.
+                </p>
+            </div>
+
+            <!-- Feature 5 -->
+            <div class="card text-center">
+                <div class="mb-3">
+                    <i class="fas fa-users" style="font-size: 3rem; color: #667eea;"></i>
+                </div>
+                <h3 style="color: #333; margin-bottom: 15px;">User Management</h3>
+                <p style="color: #666;">
+                    Comprehensive user management with approval workflow and document verification.
+                </p>
+            </div>
+
+            <!-- Feature 6 -->
+            <div class="card text-center">
+                <div class="mb-3">
+                    <i class="fas fa-mobile-alt" style="font-size: 3rem; color: #667eea;"></i>
+                </div>
+                <h3 style="color: #333; margin-bottom: 15px;">Mobile Friendly</h3>
+                <p style="color: #666;">
+                    Responsive design works perfectly on all devices. Access from anywhere, anytime.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="how-it-works" style="padding: 60px 0; background: rgba(255,255,255,0.1);">
+    <div class="container">
+        <h2 class="text-center mb-5" style="color: white; font-size: 2.5rem; font-weight: bold;">
+            How It Works
+        </h2>
+        
+        <div class="grid-2">
+            <!-- For Users -->
+            <div class="card">
+                <h3 class="text-center mb-4" style="color: #667eea;">
+                    <i class="fas fa-user"></i> For Users
+                </h3>
+                <div class="steps">
+                    <div class="step mb-3">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Register & Upload Documents</h4>
+                            <p>Create account and upload Aadhaar card (front & back) and selfie for verification.</p>
+                        </div>
+                    </div>
+                    <div class="step mb-3">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Wait for Approval</h4>
+                            <p>Admin reviews your documents and approves your account for access.</p>
+                        </div>
+                    </div>
+                    <div class="step mb-3">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Browse & Join Events</h4>
+                            <p>View available political events and register for the ones you want to attend.</p>
+                        </div>
+                    </div>
+                    <div class="step mb-3">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Check-in at Event</h4>
+                            <p>Scan the QR code at the event venue to mark your attendance.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- For Admins -->
+            <div class="card">
+                <h3 class="text-center mb-4" style="color: #667eea;">
+                    <i class="fas fa-user-shield"></i> For Admins
+                </h3>
+                <div class="steps">
+                    <div class="step mb-3">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Review User Applications</h4>
+                            <p>Review submitted documents and approve or reject user registrations.</p>
+                        </div>
+                    </div>
+                    <div class="step mb-3">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Create Events</h4>
+                            <p>Add new political events with details, images, and party information.</p>
+                        </div>
+                    </div>
+                    <div class="step mb-3">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Generate QR Codes</h4>
+                            <p>Each event gets a unique QR code for secure check-in process.</p>
+                        </div>
+                    </div>
+                    <div class="step mb-3">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Monitor Attendance</h4>
+                            <p>Track real-time attendance and event statistics during live events.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section text-center" style="padding: 60px 0;">
+    <div class="container">
+        <h2 style="color: white; font-size: 2.5rem; font-weight: bold; margin-bottom: 20px;">
+            Ready to Get Started?
+        </h2>
+        <p style="color: white; font-size: 1.2rem; margin-bottom: 30px; opacity: 0.9;">
+            Join thousands of users who trust our platform for political event management.
+        </p>
+        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-rocket"></i> Start Now
+        </a>
+    </div>
+</section>
+
+<style>
+.step {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.step-number {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.step-content h4 {
+    color: #333;
+    margin-bottom: 5px;
+    font-size: 1.1rem;
+}
+
+.step-content p {
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.btn-lg {
+    padding: 15px 40px;
+    font-size: 1.1rem;
+}
+
+.hero-buttons {
+    margin-top: 30px;
+}
+
+@media (max-width: 768px) {
+    .hero-section h1 {
+        font-size: 2.5rem;
+    }
+    
+    .hero-section p {
+        font-size: 1.1rem;
+    }
+    
+    .hero-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+    }
+    
+    .hero-buttons .btn {
+        margin-right: 0;
+        width: 200px;
+    }
+}
+</style>
+{% endblock %}
+

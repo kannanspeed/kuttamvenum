@@ -1,0 +1,579 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Events - Political Event Management{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="header-section mb-4">
+    <div class="card">
+        <div class="d-flex justify-between align-center">
+            <div>
+                <h2 style="color: #333; margin-bottom: 10px;">
+                    <i class="fas fa-calendar-alt"></i> Event Management
+                </h2>
+                <p style="color: #666; margin: 0;">
+                    Create, manage, and monitor political events
+                </p>
+            </div>
+            <div class="header-actions">
+                <a href="{{ url_for('add_event') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Event
+                </a>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Event Statistics -->
+<div class="stats-section mb-4">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ events|length }}</div>
+            <div class="stat-label">Total Events</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ events|selectattr('status', 'equalto', 'upcoming')|list|length }}</div>
+            <div class="stat-label">Upcoming Events</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ events|selectattr('status', 'equalto', 'live')|list|length }}</div>
+            <div class="stat-label">Live Events</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ events|selectattr('status', 'equalto', 'completed')|list|length }}</div>
+            <div class="stat-label">Completed Events</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="filter-section mb-4">
+    <div class="card">
+        <div class="d-flex justify-between align-center" style="gap: 20px;">
+            <div style="flex: 1;">
+                <input type="text" id="search-events" class="form-control" 
+                       placeholder="Search events by title, party, or description...">
+            </div>
+            <div style="min-width: 200px;">
+                <select id="filter-status" class="form-control">
+                    <option value="all">All Status</option>
+                    <option value="upcoming">Upcoming</option>
+                    <option value="live">Live</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Events List -->
+<div class="events-section">
+    {% if events %}
+        <div class="events-grid">
+            {% for event in events %}
+                <div class="event-card" data-event-id="{{ event.id }}" data-status="{{ event.status }}">
+                    <div class="event-header">
+                        {% if event.image %}
+                            <img src="{{ url_for('static', filename='uploads/' + event.image) }}" 
+                                 alt="{{ event.title }}" class="event-image">
+                        {% else %}
+                            <div class="event-image-placeholder">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                        {% endif %}
+                        <div class="event-status-badge">
+                            <span class="status-badge status-{{ event.status }}">
+                                {{ event.status|title }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="event-content">
+                        <h4 class="event-title">{{ event.title }}</h4>
+                        <div class="event-party">
+                            <i class="fas fa-flag"></i> {{ event.party_name }}
+                        </div>
+                        <p class="event-description">{{ event.description[:100] }}{% if event.description|length > 100 %}...{% endif %}</p>
+                        
+                        <div class="event-details">
+                            <div class="event-date">
+                                <i class="fas fa-calendar"></i> 
+                                {{ event.date.strftime('%B %d, %Y') }}
+                            </div>
+                            <div class="event-time">
+                                <i class="fas fa-clock"></i> 
+                                {{ event.time.strftime('%I:%M %p') }}
+                            </div>
+                        </div>
+
+                        <div class="event-stats" id="stats-{{ event.id }}">
+                            <div class="stats-loading">
+                                <i class="fas fa-spinner fa-spin"></i> Loading stats...
+                            </div>
+                        </div>
+
+                        <div class="event-actions">
+                            <button class="btn btn-primary" onclick="viewEventStats({{ event.id }})">
+                                <i class="fas fa-chart-line"></i> View Stats
+                            </button>
+                            {% if event.qr_code %}
+                                <a href="{{ url_for('static', filename='uploads/' + event.qr_code) }}" 
+                                   target="_blank" class="btn btn-secondary">
+                                    <i class="fas fa-qrcode"></i> QR Code
+                                </a>
+                            {% endif %}
+                            <button class="btn btn-success" onclick="downloadQRCode('{{ event.qr_code }}', '{{ event.title }}')">
+                                <i class="fas fa-download"></i> Download QR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card text-center">
+            <i class="fas fa-calendar-times" style="font-size: 3rem; color: #667eea; margin-bottom: 20px;"></i>
+            <h3 style="color: #333; margin-bottom: 10px;">No Events Created</h3>
+            <p style="color: #666;">Create your first political event to get started!</p>
+            <a href="{{ url_for('add_event') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Event
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<!-- QR Code Modal -->
+<div id="qrModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h4 id="qrModalTitle" style="margin-bottom: 20px; color: #333;"></h4>
+        <div class="qr-code-container">
+            <img id="qrModalImage" src="" alt="QR Code" class="qr-code-image">
+        </div>
+        <div class="qr-actions" style="margin-top: 20px;">
+            <button class="btn btn-primary" onclick="downloadQRCode('', '')">
+                <i class="fas fa-download"></i> Download QR Code
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 25px;
+}
+
+.event-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: 1px solid #eee;
+}
+
+.event-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.event-header {
+    position: relative;
+}
+
+.event-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.event-image-placeholder {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 3rem;
+}
+
+.event-status-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+}
+
+.event-content {
+    padding: 25px;
+}
+
+.event-title {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.event-party {
+    color: #667eea;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.event-description {
+    color: #666;
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.event-details {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.event-stats {
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.stats-loading {
+    text-align: center;
+    color: #667eea;
+}
+
+.event-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #667eea;
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 5px;
+}
+
+.event-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.status-upcoming {
+    background: rgba(102, 126, 234, 0.2);
+    color: #667eea;
+    border: 1px solid #667eea;
+}
+
+.status-live {
+    background: rgba(86, 171, 47, 0.2);
+    color: #56ab2f;
+    border: 1px solid #56ab2f;
+}
+
+.status-completed {
+    background: rgba(108, 117, 125, 0.2);
+    color: #6c757d;
+    border: 1px solid #6c757d;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.modal-content {
+    position: relative;
+    margin: 5% auto;
+    padding: 30px;
+    width: 80%;
+    max-width: 500px;
+    text-align: center;
+    background: white;
+    border-radius: 15px;
+}
+
+.close {
+    color: #333;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    right: 20px;
+    top: 15px;
+}
+
+.close:hover {
+    color: #667eea;
+}
+
+.qr-code-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.qr-code-image {
+    max-width: 200px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .events-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-section .d-flex {
+        flex-direction: column;
+    }
+    
+    .event-details {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .event-actions {
+        flex-direction: column;
+    }
+    
+    .event-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Search and filter functionality
+document.getElementById('search-events').addEventListener('input', filterEvents);
+document.getElementById('filter-status').addEventListener('change', filterEvents);
+
+function filterEvents() {
+    const searchTerm = document.getElementById('search-events').value.toLowerCase();
+    const filterStatus = document.getElementById('filter-status').value;
+    const eventCards = document.querySelectorAll('.event-card');
+    
+    eventCards.forEach(card => {
+        const title = card.querySelector('.event-title').textContent.toLowerCase();
+        const party = card.querySelector('.event-party').textContent.toLowerCase();
+        const description = card.querySelector('.event-description').textContent.toLowerCase();
+        const status = card.dataset.status;
+        
+        let showCard = true;
+        
+        // Search filter
+        if (searchTerm) {
+            showCard = title.includes(searchTerm) || party.includes(searchTerm) || description.includes(searchTerm);
+        }
+        
+        // Status filter
+        if (filterStatus && filterStatus !== 'all') {
+            showCard = showCard && status === filterStatus;
+        }
+        
+        // Show/hide card with animation
+        if (showCard) {
+            card.style.display = 'block';
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'scale(1)';
+            }, 50);
+        } else {
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                card.style.display = 'none';
+            }, 300);
+        }
+    });
+}
+
+// Load event statistics
+function loadEventStats() {
+    const eventCards = document.querySelectorAll('.event-card');
+    
+    eventCards.forEach(card => {
+        const eventId = card.dataset.eventId;
+        const statsContainer = card.querySelector('.event-stats');
+        
+        fetch(`/api/event_stats/${eventId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    statsContainer.innerHTML = '<div style="color: #ff416c;">Error loading stats</div>';
+                    return;
+                }
+                
+                statsContainer.innerHTML = `
+                    <div class="event-stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-number">${data.total_registered}</span>
+                            <div class="stat-label">Registered</div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">${data.checked_in}</span>
+                            <div class="stat-label">Checked In</div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">${data.not_attended}</span>
+                            <div class="stat-label">Not Attended</div>
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                console.error('Error loading stats:', error);
+                statsContainer.innerHTML = '<div style="color: #ff416c;">Error loading stats</div>';
+            });
+    });
+}
+
+// View event statistics in modal
+function viewEventStats(eventId) {
+    fetch(`/api/event_stats/${eventId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error loading event statistics');
+                return;
+            }
+            
+            const statsHtml = `
+                <div style="text-align: center; padding: 20px;">
+                    <h3>Event Statistics</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+                        <div style="background: rgba(102, 126, 234, 0.1); padding: 15px; border-radius: 10px;">
+                            <div style="font-size: 2rem; font-weight: bold; color: #667eea;">${data.total_registered}</div>
+                            <div style="color: #666;">Total Registered</div>
+                        </div>
+                        <div style="background: rgba(86, 171, 47, 0.1); padding: 15px; border-radius: 10px;">
+                            <div style="font-size: 2rem; font-weight: bold; color: #56ab2f;">${data.checked_in}</div>
+                            <div style="color: #666;">Checked In</div>
+                        </div>
+                        <div style="background: rgba(255, 65, 108, 0.1); padding: 15px; border-radius: 10px;">
+                            <div style="font-size: 2rem; font-weight: bold; color: #ff416c;">${data.not_attended}</div>
+                            <div style="color: #666;">Not Attended</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Create and show modal
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                z-index: 10000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.8);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                border-radius: 15px;
+                max-width: 500px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+            `;
+            content.innerHTML = statsHtml;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+            
+            modal.onclick = function() {
+                document.body.removeChild(modal);
+            };
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading event statistics');
+        });
+}
+
+// Download QR code
+function downloadQRCode(qrCodePath, eventTitle) {
+    if (!qrCodePath) {
+        alert('QR code not available for this event');
+        return;
+    }
+    
+    const link = document.createElement('a');
+    link.href = `/static/uploads/${qrCodePath}`;
+    link.download = `QR_${eventTitle.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// QR code modal functionality
+function openQRModal(qrCodePath, eventTitle) {
+    document.getElementById('qrModalTitle').textContent = `QR Code - ${eventTitle}`;
+    document.getElementById('qrModalImage').src = `/static/uploads/${qrCodePath}`;
+    document.getElementById('qrModal').style.display = 'block';
+}
+
+// Close modal when clicking on X or outside
+document.querySelector('.close').onclick = function() {
+    document.getElementById('qrModal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('qrModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Load stats when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadEventStats();
+});
+</script>
+{% endblock %}
+

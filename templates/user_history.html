@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}User History - {{ user.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>User History - {{ user.name }}</h3>
+                    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Back to Users</a>
+                </div>
+                <div class="card-body">
+                    <!-- User Basic Info -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>User Information</h5>
+                            <table class="table table-sm">
+                                <tr><td><strong>Name:</strong></td><td>{{ user.name }}</td></tr>
+                                <tr><td><strong>Email:</strong></td><td>{{ user.email }}</td></tr>
+                                <tr><td><strong>Phone:</strong></td><td>{{ user.phone }}</td></tr>
+                                <tr><td><strong>Location:</strong></td><td>{{ user.location }}</td></tr>
+                                <tr><td><strong>Status:</strong></td><td>
+                                    <span class="badge {% if user.status == 'approved' %}badge-success{% elif user.status == 'rejected' %}badge-danger{% else %}badge-warning{% endif %}">
+                                        {{ user.status.title() }}
+                                    </span>
+                                </td></tr>
+                                <tr><td><strong>Registered:</strong></td><td>{{ user.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td></tr>
+                                <tr><td><strong>Last Updated:</strong></td><td>{{ user.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Document Status</h5>
+                            <table class="table table-sm">
+                                <tr><td><strong>Aadhaar Front:</strong></td><td>
+                                    {% if user.adhar_front %}
+                                        <span class="badge badge-success">Uploaded</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Not Uploaded</span>
+                                    {% endif %}
+                                </td></tr>
+                                <tr><td><strong>Aadhaar Back:</strong></td><td>
+                                    {% if user.adhar_back %}
+                                        <span class="badge badge-success">Uploaded</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Not Uploaded</span>
+                                    {% endif %}
+                                </td></tr>
+                                <tr><td><strong>Selfie:</strong></td><td>
+                                    {% if user.selfie %}
+                                        <span class="badge badge-success">Uploaded</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Not Uploaded</span>
+                                    {% endif %}
+                                </td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Event Registrations -->
+                    <div class="mb-4">
+                        <h5>Event Registrations ({{ registrations|length }})</h5>
+                        {% if registrations %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Event</th>
+                                            <th>Registration Date</th>
+                                            <th>Status</th>
+                                            <th>Check-in Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for reg in registrations %}
+                                        <tr>
+                                            <td>{{ reg.event.title if reg.event else 'Event Deleted' }}</td>
+                                            <td>{{ reg.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                            <td>
+                                                <span class="badge {% if reg.status == 'checked_in' %}badge-success{% else %}badge-info{% endif %}">
+                                                    {{ reg.status.replace('_', ' ').title() }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if reg.check_in_time %}
+                                                    {{ reg.check_in_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No event registrations found.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Activity History -->
+                    <div class="mb-4">
+                        <h5>Activity History ({{ activities|length }})</h5>
+                        {% if activities %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date/Time</th>
+                                            <th>Action</th>
+                                            <th>Description</th>
+                                            <th>Performed By</th>
+                                            <th>IP Address</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for activity in activities %}
+                                        <tr>
+                                            <td>{{ activity.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if 'approved' in activity.action %}badge-success
+                                                    {% elif 'rejected' in activity.action %}badge-danger
+                                                    {% elif 'login' in activity.action %}badge-info
+                                                    {% elif 'upload' in activity.action %}badge-warning
+                                                    {% else %}badge-secondary{% endif %}">
+                                                    {{ activity.action.replace('_', ' ').title() }}
+                                                </span>
+                                            </td>
+                                            <td>{{ activity.description or '-' }}</td>
+                                            <td>
+                                                {% if activity.admin_email %}
+                                                    <strong>Admin:</strong> {{ activity.admin_email }}
+                                                {% elif activity.user_id %}
+                                                    <strong>User:</strong> {{ user.email }}
+                                                {% else %}
+                                                    System
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ activity.ip_address or '-' }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No activity history found.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-4">
+                        {% if user.status == 'pending' %}
+                            <a href="{{ url_for('approve_user', user_id=user.id) }}" 
+                               class="btn btn-success" 
+                               onclick="return confirm('Are you sure you want to approve this user?')">
+                                Approve User
+                            </a>
+                            <a href="{{ url_for('reject_user', user_id=user.id) }}" 
+                               class="btn btn-danger ml-2" 
+                               onclick="return confirm('Are you sure you want to reject this user?')">
+                                Reject User
+                            </a>
+                        {% elif user.status == 'rejected' %}
+                            <a href="{{ url_for('approve_user', user_id=user.id) }}" 
+                               class="btn btn-success" 
+                               onclick="return confirm('Are you sure you want to approve this user?')">
+                                Approve User
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

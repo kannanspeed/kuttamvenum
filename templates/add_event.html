@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Add Event - Political Event Management{% endblock %}
+
+{% block content %}
+<div class="add-event-container" style="min-height: 80vh; padding: 40px 0;">
+    <div class="card" style="max-width: 800px; margin: 0 auto;">
+        <div class="text-center mb-4">
+            <i class="fas fa-calendar-plus" style="font-size: 3rem; color: #667eea; margin-bottom: 20px;"></i>
+            <h2 style="color: #333; margin-bottom: 10px;">Create New Political Event</h2>
+            <p style="color: #666;">Add a new political event with all necessary details</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('add_event') }}" enctype="multipart/form-data">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="title" class="form-label">
+                        <i class="fas fa-heading"></i> Event Title *
+                    </label>
+                    <input type="text" id="title" name="title" class="form-control" required 
+                           placeholder="Enter event title">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="party_name" class="form-label">
+                        <i class="fas fa-flag"></i> Political Party *
+                    </label>
+                    <input type="text" id="party_name" name="party_name" class="form-control" required 
+                           placeholder="Enter political party name">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="description" class="form-label">
+                        <i class="fas fa-align-left"></i> Event Description *
+                    </label>
+                    <textarea id="description" name="description" class="form-control" required 
+                              placeholder="Enter detailed event description" rows="4"></textarea>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="date" class="form-label">
+                        <i class="fas fa-calendar"></i> Event Date *
+                    </label>
+                    <input type="date" id="date" name="date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="time" class="form-label">
+                        <i class="fas fa-clock"></i> Event Time *
+                    </label>
+                    <input type="time" id="time" name="time" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-image"></i> Event Image
+                    </label>
+                    <div class="file-upload">
+                        <input type="file" name="image" accept="image/*">
+                        <label class="file-upload-label">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <br>
+                            Click to upload event image
+                            <br>
+                            <small style="opacity: 0.7;">JPG, PNG, GIF (Max 5MB)</small>
+                        </label>
+                    </div>
+                    <div class="image-preview mt-2"></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-plus"></i> Create Event
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <div class="text-center mt-4">
+            <a href="{{ url_for('admin_events') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Events
+            </a>
+        </div>
+
+        <!-- Event Guidelines -->
+        <div class="event-guidelines mt-4" style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 10px;">
+            <h4 style="color: #667eea; margin-bottom: 15px; font-size: 1rem;">
+                <i class="fas fa-info-circle"></i> Event Creation Guidelines
+            </h4>
+            <div style="font-size: 0.9rem; color: #666;">
+                <ul style="padding-left: 20px; margin: 0;">
+                    <li>Provide a clear and descriptive event title</li>
+                    <li>Include detailed event description with venue and agenda</li>
+                    <li>Upload high-quality event images for better presentation</li>
+                    <li>Set appropriate date and time for the event</li>
+                    <li>QR code will be automatically generated for check-ins</li>
+                    <li>Event will be visible to approved users once created</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.add-event-container {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 20px;
+    margin: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 0;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.form-label {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.form-label i {
+    margin-right: 8px;
+    color: #667eea;
+}
+
+.file-upload-label {
+    display: block;
+    padding: 30px;
+    border: 2px dashed #667eea;
+    border-radius: 10px;
+    text-align: center;
+    color: #667eea;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: rgba(102, 126, 234, 0.05);
+    cursor: pointer;
+}
+
+.file-upload:hover .file-upload-label {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #764ba2;
+}
+
+.file-upload-label i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.event-guidelines {
+    border-left: 4px solid #667eea;
+}
+
+.event-guidelines ul li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+    .add-event-container {
+        margin: 10px;
+    }
+    
+    .card {
+        padding: 20px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+}
+</style>
+
+<script>
+// Set minimum date to today
+document.getElementById('date').min = new Date().toISOString().split('T')[0];
+
+// File upload preview functionality
+document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        // Show file name
+        const label = this.parentNode.querySelector('.file-upload-label');
+        if (label) {
+            label.innerHTML = `
+                <i class="fas fa-check-circle" style="color: #56ab2f;"></i>
+                <br>
+                Selected: ${file.name}
+                <br>
+                <small style="opacity: 0.7;">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+            `;
+        }
+        
+        // Preview image if it's an image file
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const previewContainer = document.querySelector('.image-preview');
+                if (previewContainer) {
+                    previewContainer.innerHTML = `
+                        <img src="${e.target.result}" style="max-width: 200px; max-height: 200px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                    `;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const title = document.getElementById('title').value.trim();
+    const partyName = document.getElementById('party_name').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const date = document.getElementById('date').value;
+    const time = document.getElementById('time').value;
+    
+    if (!title || !partyName || !description || !date || !time) {
+        e.preventDefault();
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    // Check if date is in the future
+    const selectedDate = new Date(date + ' ' + time);
+    const now = new Date();
+    
+    if (selectedDate <= now) {
+        e.preventDefault();
+        alert('Event date and time must be in the future');
+        return;
+    }
+    
+    // Check file size if image is selected
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput.files[0] && fileInput.files[0].size > 5 * 1024 * 1024) {
+        e.preventDefault();
+        alert('Image file size must be less than 5MB');
+        return;
+    }
+});
+
+// Auto-resize textarea
+document.getElementById('description').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+});
+</script>
+{% endblock %}
+

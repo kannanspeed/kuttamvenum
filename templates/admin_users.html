@@ -1,0 +1,471 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users - Political Event Management{% endblock %}
+
+{% block content %}
+<!-- Header Section -->
+<div class="header-section mb-4">
+    <div class="card">
+        <div class="d-flex justify-between align-center">
+            <div>
+                <h2 style="color: #333; margin-bottom: 10px;">
+                    <i class="fas fa-users"></i> User Management
+                </h2>
+                <p style="color: #666; margin: 0;">
+                    Review and manage user registrations and verifications
+                </p>
+            </div>
+            <div class="header-actions">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Statistics -->
+<div class="stats-section mb-4">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ users.items|selectattr('status', 'equalto', 'pending')|list|length }}</div>
+            <div class="stat-label">Pending Approval</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ users.items|selectattr('status', 'equalto', 'approved')|list|length }}</div>
+            <div class="stat-label">Approved Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ users.items|selectattr('status', 'equalto', 'rejected')|list|length }}</div>
+            <div class="stat-label">Rejected Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ users.items|length }}</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="filter-section mb-4">
+    <div class="card">
+        <div class="d-flex justify-between align-center" style="gap: 20px;">
+            <div style="flex: 1;">
+                <input type="text" id="search-users" class="form-control" 
+                       placeholder="Search users by name, email, or phone...">
+            </div>
+            <div style="min-width: 200px;">
+                <select id="filter-status" class="form-control">
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Users List -->
+<div class="users-section">
+    {% if users.items %}
+        <div class="users-grid">
+            {% for user in users.items %}
+                <div class="user-card" data-user-id="{{ user.id }}" data-status="{{ user.status }}">
+                    <div class="user-header">
+                        <div class="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="user-info">
+                            <h4>{{ user.name }}</h4>
+                            <p><i class="fas fa-envelope"></i> {{ user.email }}</p>
+                            <p><i class="fas fa-phone"></i> {{ user.phone }}</p>
+                            <p><i class="fas fa-map-marker-alt"></i> {{ user.location }}</p>
+                        </div>
+                        <div class="user-status">
+                            <span class="status-badge status-{{ user.status }}">
+                                {% if user.status == 'pending' %}
+                                    <i class="fas fa-clock"></i> Pending
+                                {% elif user.status == 'approved' %}
+                                    <i class="fas fa-check-circle"></i> Approved
+                                {% elif user.status == 'rejected' %}
+                                    <i class="fas fa-times-circle"></i> Rejected
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="user-documents-section">
+                        {% if user.adhar_front and user.adhar_back and user.selfie %}
+                            <h5 style="color: #333; margin-bottom: 15px;">
+                                <i class="fas fa-id-card"></i> Submitted Documents
+                            </h5>
+                            <div class="user-documents">
+                                <div class="document-preview">
+                                    <img src="{{ url_for('static', filename='uploads/' + user.adhar_front) }}" 
+                                         alt="Aadhaar Front" onclick="openImageModal(this.src, 'Aadhaar Front')">
+                                    <small>Aadhaar Front</small>
+                                </div>
+                                <div class="document-preview">
+                                    <img src="{{ url_for('static', filename='uploads/' + user.adhar_back) }}" 
+                                         alt="Aadhaar Back" onclick="openImageModal(this.src, 'Aadhaar Back')">
+                                    <small>Aadhaar Back</small>
+                                </div>
+                                <div class="document-preview">
+                                    <img src="{{ url_for('static', filename='uploads/' + user.selfie) }}" 
+                                         alt="Selfie" onclick="openImageModal(this.src, 'Selfie')">
+                                    <small>Selfie</small>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="no-documents">
+                                <i class="fas fa-exclamation-triangle" style="color: #ffc107; font-size: 2rem;"></i>
+                                <p style="color: #666; margin: 10px 0;">Documents not uploaded yet</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="user-actions">
+                        {% if user.status == 'pending' %}
+                            {% if user.adhar_front and user.adhar_back and user.selfie %}
+                                <a href="{{ url_for('approve_user', user_id=user.id) }}" 
+                                   class="btn btn-success" onclick="return confirm('Approve this user?')">
+                                    <i class="fas fa-check"></i> Approve
+                                </a>
+                                <a href="{{ url_for('reject_user', user_id=user.id) }}" 
+                                   class="btn btn-danger" onclick="return confirm('Reject this user?')">
+                                    <i class="fas fa-times"></i> Reject
+                                </a>
+                            {% else %}
+                                <span class="status-badge status-pending">
+                                    <i class="fas fa-exclamation-triangle"></i> Documents Pending
+                                </span>
+                            {% endif %}
+                        {% elif user.status == 'approved' %}
+                            <span class="status-badge status-approved">
+                                <i class="fas fa-check-circle"></i> User Approved
+                            </span>
+                            <small style="color: #666; display: block; margin-top: 10px;">
+                                Approved on {{ user.updated_at.strftime('%B %d, %Y') if user.updated_at else user.created_at.strftime('%B %d, %Y') }}
+                            </small>
+                        {% elif user.status == 'rejected' %}
+                            <span class="status-badge status-rejected">
+                                <i class="fas fa-times-circle"></i> User Rejected
+                            </span>
+                            <small style="color: #666; display: block; margin-top: 10px;">
+                                Rejected on {{ user.updated_at.strftime('%B %d, %Y') if user.updated_at else user.created_at.strftime('%B %d, %Y') }}
+                            </small>
+                        {% endif %}
+                        
+                        <!-- User History Link -->
+                        <a href="{{ url_for('user_history', user_id=user.id) }}" 
+                           class="btn btn-info btn-sm" style="margin-top: 10px;">
+                            <i class="fas fa-history"></i> View History
+                        </a>
+                    </div>
+
+                    <div class="user-meta">
+                        <small style="color: #666;">
+                            <i class="fas fa-calendar"></i> Registered: {{ user.created_at.strftime('%B %d, %Y') }}
+                        </small>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card text-center">
+            <i class="fas fa-users-slash" style="font-size: 3rem; color: #667eea; margin-bottom: 20px;"></i>
+            <h3 style="color: #333; margin-bottom: 10px;">No Users Found</h3>
+            <p style="color: #666;">There are no users registered in the system yet.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Image Modal -->
+<div id="imageModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h4 id="modalTitle" style="margin-bottom: 15px; color: #333;"></h4>
+        <img id="modalImage" src="" alt="Document Preview">
+    </div>
+</div>
+
+<style>
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 25px;
+}
+
+.user-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: 1px solid #eee;
+}
+
+.user-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.user-header {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    align-items: flex-start;
+}
+
+.user-avatar {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-info h4 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.user-info p {
+    margin: 0 0 5px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.user-status {
+    flex-shrink: 0;
+}
+
+.status-badge {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.status-pending {
+    background: rgba(255, 193, 7, 0.2);
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.status-approved {
+    background: rgba(86, 171, 47, 0.2);
+    color: #56ab2f;
+    border: 1px solid #56ab2f;
+}
+
+.status-rejected {
+    background: rgba(255, 65, 108, 0.2);
+    color: #ff416c;
+    border: 1px solid #ff416c;
+}
+
+.user-documents-section {
+    margin-bottom: 20px;
+}
+
+.user-documents {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.document-preview {
+    text-align: center;
+}
+
+.document-preview img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.document-preview img:hover {
+    transform: scale(1.05);
+    border-color: #667eea;
+}
+
+.document-preview small {
+    display: block;
+    margin-top: 8px;
+    color: #666;
+    font-size: 0.8rem;
+}
+
+.no-documents {
+    text-align: center;
+    padding: 30px;
+    background: rgba(255, 193, 7, 0.1);
+    border-radius: 10px;
+    border: 1px dashed #ffc107;
+}
+
+.user-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.user-meta {
+    text-align: center;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.modal-content {
+    position: relative;
+    margin: 5% auto;
+    padding: 20px;
+    width: 80%;
+    max-width: 600px;
+    text-align: center;
+    background: white;
+    border-radius: 15px;
+}
+
+.close {
+    color: #333;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    right: 20px;
+    top: 15px;
+}
+
+.close:hover {
+    color: #667eea;
+}
+
+#modalImage {
+    max-width: 100%;
+    max-height: 70vh;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .users-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-section .d-flex {
+        flex-direction: column;
+    }
+    
+    .user-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .user-documents {
+        grid-template-columns: 1fr;
+    }
+    
+    .user-actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+// Search and filter functionality
+document.getElementById('search-users').addEventListener('input', filterUsers);
+document.getElementById('filter-status').addEventListener('change', filterUsers);
+
+function filterUsers() {
+    const searchTerm = document.getElementById('search-users').value.toLowerCase();
+    const filterStatus = document.getElementById('filter-status').value;
+    const userCards = document.querySelectorAll('.user-card');
+    
+    userCards.forEach(card => {
+        const userName = card.querySelector('h4').textContent.toLowerCase();
+        const userEmail = card.querySelector('p').textContent.toLowerCase();
+        const userStatus = card.dataset.status;
+        
+        let showCard = true;
+        
+        // Search filter
+        if (searchTerm) {
+            showCard = userName.includes(searchTerm) || userEmail.includes(searchTerm);
+        }
+        
+        // Status filter
+        if (filterStatus && filterStatus !== 'all') {
+            showCard = showCard && userStatus === filterStatus;
+        }
+        
+        // Show/hide card with animation
+        if (showCard) {
+            card.style.display = 'block';
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transform = 'scale(1)';
+            }, 50);
+        } else {
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                card.style.display = 'none';
+            }, 300);
+        }
+    });
+}
+
+// Image modal functionality
+function openImageModal(src, title) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalImage').src = src;
+    document.getElementById('imageModal').style.display = 'block';
+}
+
+// Close modal when clicking on X or outside
+document.querySelector('.close').onclick = function() {
+    document.getElementById('imageModal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('imageModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
+

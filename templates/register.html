@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Political Event Management{% endblock %}
+
+{% block content %}
+<div class="register-container" style="min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 20px 0;">
+    <div class="card" style="max-width: 500px; width: 100%;">
+        <div class="text-center mb-4">
+            <i class="fas fa-user-plus" style="font-size: 3rem; color: #667eea; margin-bottom: 20px;"></i>
+            <h2 style="color: #333; margin-bottom: 10px;">Create Account</h2>
+            <p style="color: #666;">Join our political event management platform</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label for="name" class="form-label">
+                    <i class="fas fa-user"></i> Full Name (as per Aadhaar)
+                </label>
+                <input type="text" id="name" name="name" class="form-control" required 
+                       placeholder="Enter your full name as shown on Aadhaar card">
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="form-label">
+                    <i class="fas fa-envelope"></i> Email Address
+                </label>
+                <input type="email" id="email" name="email" class="form-control" required 
+                       placeholder="Enter your email address">
+            </div>
+
+            <div class="form-group">
+                <label for="phone" class="form-label">
+                    <i class="fas fa-phone"></i> Phone Number
+                </label>
+                <input type="tel" id="phone" name="phone" class="form-control" required 
+                       placeholder="Enter your 10-digit phone number" pattern="[0-9]{10}">
+            </div>
+
+            <div class="form-group">
+                <label for="location" class="form-label">
+                    <i class="fas fa-map-marker-alt"></i> Location
+                </label>
+                <input type="text" id="location" name="location" class="form-control" required 
+                       placeholder="Enter your city/location">
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock"></i> Password
+                </label>
+                <input type="password" id="password" name="password" class="form-control" required 
+                       placeholder="Create a strong password (min 6 characters)">
+                <small style="color: #666; font-size: 0.875rem;">
+                    Password must be at least 6 characters long
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password" class="form-label">
+                    <i class="fas fa-lock"></i> Confirm Password
+                </label>
+                <input type="password" id="confirm_password" name="confirm_password" class="form-control" required 
+                       placeholder="Confirm your password">
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-wrapper">
+                    <input type="checkbox" id="terms" name="terms" required>
+                    <label for="terms" style="display: inline; margin-left: 10px; color: #666;">
+                        I agree to the <a href="#" style="color: #667eea;">Terms of Service</a> and 
+                        <a href="#" style="color: #667eea;">Privacy Policy</a>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center mt-4">
+            <p style="color: #666; margin-bottom: 15px;">
+                Already have an account? 
+                <a href="{{ url_for('login') }}" style="color: #667eea; text-decoration: none; font-weight: 600;">
+                    Sign in here
+                </a>
+            </p>
+        </div>
+
+        <!-- Registration Process Info -->
+        <div class="registration-info mt-4" style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 10px;">
+            <h4 style="color: #667eea; margin-bottom: 15px; font-size: 1rem;">
+                <i class="fas fa-info-circle"></i> Registration Process
+            </h4>
+            <div style="font-size: 0.9rem; color: #666;">
+                <ol style="padding-left: 20px; margin: 0;">
+                    <li>Complete this registration form</li>
+                    <li>Upload your Aadhaar card (front & back) and selfie</li>
+                    <li>Wait for admin approval (usually within 24 hours)</li>
+                    <li>Start browsing and joining political events!</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.register-container {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 20px;
+    margin: 20px;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.form-label {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.form-label i {
+    margin-right: 8px;
+    color: #667eea;
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+    margin-top: 3px;
+    transform: scale(1.2);
+}
+
+.registration-info {
+    border-left: 4px solid #667eea;
+}
+
+.registration-info ol li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+    .register-container {
+        margin: 10px;
+    }
+    
+    .card {
+        padding: 20px;
+    }
+    
+    .checkbox-wrapper {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .checkbox-wrapper label {
+        margin-left: 0;
+        margin-top: 5px;
+    }
+}
+</style>
+
+<script>
+// Password confirmation validation
+document.getElementById('confirm_password').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = this.value;
+    
+    if (password !== confirmPassword) {
+        this.setCustomValidity('Passwords do not match');
+        this.style.borderColor = '#ff416c';
+    } else {
+        this.setCustomValidity('');
+        this.style.borderColor = '#e9ecef';
+    }
+});
+
+document.getElementById('password').addEventListener('input', function() {
+    const confirmPassword = document.getElementById('confirm_password');
+    if (confirmPassword.value) {
+        confirmPassword.dispatchEvent(new Event('input'));
+    }
+});
+</script>
+{% endblock %}
+
