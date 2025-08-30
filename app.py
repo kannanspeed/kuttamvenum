@@ -62,20 +62,11 @@ class Config:
     # Encryption key for file storage
     ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key())
     
-    # Hyperverge KYC API
-    HYPERVERGE_API_KEY = os.environ.get('HYPERVERGE_API_KEY')
-    HYPERVERGE_API_SECRET = os.environ.get('HYPERVERGE_API_SECRET')
-    
     # WhatsApp Business API
     WHATSAPP_API_KEY = os.environ.get('WHATSAPP_API_KEY')
     WHATSAPP_API_SECRET = os.environ.get('WHATSAPP_API_SECRET')
     WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID')
     WHATSAPP_ACCESS_TOKEN = os.environ.get('WHATSAPP_ACCESS_TOKEN')
-    
-    # Razorpay Payment Gateway
-    RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID')
-    RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET')
-    RAZORPAY_WEBHOOK_SECRET = os.environ.get('RAZORPAY_WEBHOOK_SECRET')
     
     # Google Maps API
     GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
@@ -87,10 +78,8 @@ class Config:
     # Redis Configuration
     REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
     
-    # Commission Rates
-    PLATFORM_COMMISSION_RATE = float(os.environ.get('PLATFORM_COMMISSION_RATE', 0.05))
-    GATEWAY_COMMISSION_RATE = float(os.environ.get('GATEWAY_COMMISSION_RATE', 0.02))
-    PAYOUT_COMMISSION_RATE = float(os.environ.get('PAYOUT_COMMISSION_RATE', 0.01))
+    # Platform Configuration
+    PLATFORM_NAME = os.environ.get('PLATFORM_NAME', 'Political Event Management System')
     
     # OTP Configuration
     OTP_EXPIRY_MINUTES = int(os.environ.get('OTP_EXPIRY_MINUTES', 10))
@@ -1015,61 +1004,30 @@ def send_approval_email(email, name, status):
 # ============================================================================
 
 # Import service classes
-from services.kyc_service import HypervergeKYC
 from services.email_verification import PoliticalPartyVerification
 from services.whatsapp_service import WhatsAppService, WhatsAppGroupService
-from services.payment_service import RazorpayService, CommissionService
 from services.crm_service import FreshdeskCRM
 from services.auto_matcher import AutoMatcher
 from services.maps_service import GoogleMapsService
 
 # Initialize services
-kyc_service = HypervergeKYC()
 party_verification = PoliticalPartyVerification()
 whatsapp_service = WhatsAppService()
 whatsapp_group_service = WhatsAppGroupService()
-payment_service = RazorpayService()
-commission_service = CommissionService()
 crm_service = FreshdeskCRM()
 auto_matcher = AutoMatcher()
 maps_service = GoogleMapsService()
 
-# KYC Verification Routes
+# KYC Verification Routes (Disabled - KYC service removed)
 @app.route('/api/kyc/verify', methods=['POST'])
 def kyc_verify():
-    """Verify KYC documents using Hyperverge"""
-    try:
-        data = request.get_json()
-        front_image_path = data.get('front_image_path')
-        back_image_path = data.get('back_image_path')
-        selfie_path = data.get('selfie_path')
-        
-        if not all([front_image_path, back_image_path, selfie_path]):
-            return jsonify({'success': False, 'error': 'All document images required'}), 400
-        
-        result = kyc_service.verify_documents(front_image_path, back_image_path, selfie_path)
-        return jsonify(result)
-    
-    except Exception as e:
-        logger.error(f"KYC verification error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+    """KYC verification disabled - service removed"""
+    return jsonify({'success': False, 'error': 'KYC verification service has been removed from this version'}), 501
 
 @app.route('/api/kyc/status/<user_id>', methods=['GET'])
 def kyc_status(user_id):
-    """Get KYC verification status for a user"""
-    try:
-        # This would typically query the database
-        # For now, return a placeholder response
-        return jsonify({
-            'success': True,
-            'user_id': user_id,
-            'kyc_status': 'pending',
-            'verification_score': 0.0
-        })
-    
-    except Exception as e:
-        logger.error(f"KYC status error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+    """KYC status check disabled - service removed"""
+    return jsonify({'success': False, 'error': 'KYC verification service has been removed from this version'}), 501
 
 # WhatsApp Routes
 @app.route('/api/whatsapp/send-otp', methods=['POST'])
@@ -1126,64 +1084,21 @@ def create_whatsapp_group():
         logger.error(f"WhatsApp group creation error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Payment Routes
+# Payment Routes (Disabled - Payment service removed)
 @app.route('/api/payments/create-order', methods=['POST'])
 def create_payment_order():
-    """Create Razorpay payment order"""
-    try:
-        data = request.get_json()
-        amount = data.get('amount')
-        currency = data.get('currency', 'INR')
-        receipt = data.get('receipt')
-        
-        if not amount:
-            return jsonify({'success': False, 'error': 'Amount required'}), 400
-        
-        result = payment_service.create_order(amount, currency, receipt)
-        return jsonify(result)
-    
-    except Exception as e:
-        logger.error(f"Payment order creation error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+    """Payment processing disabled - service removed"""
+    return jsonify({'success': False, 'error': 'Payment processing service has been removed from this version'}), 501
 
 @app.route('/api/payments/verify', methods=['POST'])
 def verify_payment():
-    """Verify Razorpay payment signature"""
-    try:
-        data = request.get_json()
-        payment_id = data.get('payment_id')
-        order_id = data.get('order_id')
-        signature = data.get('signature')
-        
-        if not all([payment_id, order_id, signature]):
-            return jsonify({'success': False, 'error': 'Payment ID, order ID, and signature required'}), 400
-        
-        result = payment_service.verify_payment(payment_id, order_id, signature)
-        return jsonify(result)
-    
-    except Exception as e:
-        logger.error(f"Payment verification error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+    """Payment verification disabled - service removed"""
+    return jsonify({'success': False, 'error': 'Payment processing service has been removed from this version'}), 501
 
 @app.route('/api/payments/payout', methods=['POST'])
 def create_payout():
-    """Create automated payout for volunteers"""
-    try:
-        data = request.get_json()
-        amount = data.get('amount')
-        account_number = data.get('account_number')
-        ifsc_code = data.get('ifsc_code')
-        name = data.get('name')
-        
-        if not all([amount, account_number, ifsc_code, name]):
-            return jsonify({'success': False, 'error': 'All payout details required'}), 400
-        
-        result = payment_service.create_payout(amount, account_number, ifsc_code, name)
-        return jsonify(result)
-    
-    except Exception as e:
-        logger.error(f"Payout creation error: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+    """Payout processing disabled - service removed"""
+    return jsonify({'success': False, 'error': 'Payment processing service has been removed from this version'}), 501
 
 # CRM Support Routes
 @app.route('/api/support/ticket', methods=['POST'])
@@ -1308,15 +1223,13 @@ if __name__ == '__main__':
     print("✅ Security: JWT, Input validation, File encryption")
     print("✅ Core Features: Activity logging, Admin history, Event management")
     print("✅ NEW FEATURES IMPLEMENTED:")
-    print("   🔐 KYC Verification (Hyperverge)")
     print("   🏛️  Political Party Email Verification")
     print("   📱 WhatsApp OTP & Group Management")
-    print("   💳 Razorpay Payment Integration")
     print("   🎫 Freshdesk CRM Support")
     print("   🤖 Auto Matcher/Scheduler")
-    print("   💰 Commission Logic")
     print("   🗺️  Google Maps Integration")
     print("   📋 Terms & Conditions")
+    print("   ⚠️  KYC & Payment services removed")
     print("✅ Server starting at http://127.0.0.1:5000")
     print("=" * 80)
     

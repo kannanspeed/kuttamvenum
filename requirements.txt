@@ -9,7 +9,7 @@ gunicorn==20.1.0
 
 # New dependencies for comprehensive features
 requests==2.31.0
-razorpay==1.3.0
+# razorpay==1.3.0  # Removed - payment service disabled
 googlemaps==4.10.0
 psycopg2-binary>=2.9.0
 redis==4.6.0
