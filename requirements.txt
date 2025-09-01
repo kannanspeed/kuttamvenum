@@ -11,5 +11,4 @@ requests==2.31.0
 qrcode==7.4.2
 Pillow>=10.4.0
 gunicorn==21.2.0
-authlib==1.2.1
 googlemaps>=4.10.0

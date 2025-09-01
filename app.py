@@ -17,7 +17,6 @@ from marshmallow import Schema, fields, validate, validates_schema, ValidationEr
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from simple_auth0 import simple_auth0
 
 # Load environment variables
 load_dotenv()
@@ -115,8 +114,6 @@ class TestingConfig(Config):
 
 app.config.from_object(Config)
 
-# Auth0 is handled by simple_auth0 module
-
 # Initialize database
 db.init_app(app)
 migrate.init_app(app, db)
@@ -132,7 +129,7 @@ from models import *
 def ensure_upload_directory():
     """Ensure upload directory exists and is writable"""
     try:
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         # Test if directory is writable
         test_file = os.path.join(app.config['UPLOAD_FOLDER'], 'test.txt')
         with open(test_file, 'w') as f:
@@ -482,10 +479,10 @@ def user_login():
     """Login route specifically for normal users/volunteers"""
     if request.method == 'POST':
         try:
-            data = sanitize_input(request.form.to_dict())
-            email = data.get('email')
-            password = data.get('password')
-            
+        data = sanitize_input(request.form.to_dict())
+        email = data.get('email')
+        password = data.get('password')
+        
             # Check if user exists and is a normal user
             if email in users_db:
                 user = users_db[email]
@@ -547,15 +544,15 @@ def admin_login():
 			data = sanitize_input(request.form.to_dict())
 			email = data.get('email')
 			password = data.get('password')
-			# Check admin users
-			if email in admin_credentials:
+        # Check admin users
+        if email in admin_credentials:
 				password_check = check_password_hash(admin_credentials[email]['password'], password)
 				if password_check:
-					session['user_id'] = email
-					session['role'] = 'admin'
-					log_activity('admin_login', f'Admin {email} logged in')
-					flash('Welcome Admin!')
-					return redirect(url_for('admin_dashboard'))
+                session['user_id'] = email
+                session['role'] = 'admin'
+                log_activity('admin_login', f'Admin {email} logged in')
+                flash('Welcome Admin!')
+                return redirect(url_for('admin_dashboard'))
 			flash('Invalid admin credentials')
 		except Exception as e:
 			print(f"DEBUG: Admin login error: {e}")
@@ -587,8 +584,8 @@ def login():
                 user = users_db[email]
                 if check_password_hash(user['password'], password):
                     if user['status'] == 'approved':
-                        session['user_id'] = email
-                        session['role'] = 'user'
+                session['user_id'] = email
+                session['role'] = 'user'
                         session['user_type'] = user.get('user_type', 'normal')
                         flash(f'Welcome {user["name"]}!')
                         
@@ -600,112 +597,12 @@ def login():
                     else:
                         return render_template('approval_waiting.html', user_type=user.get('user_type', 'normal'))
             
-            flash('Invalid credentials or account not approved')
+        flash('Invalid credentials or account not approved')
         except Exception as e:
             print(f"Login error: {e}")
             flash('An error occurred during login')
     
     return render_template('login.html')
-
-# Auth0 Routes for Normal Users
-@app.route('/auth0/login')
-def auth0_login():
-    """Redirect to Auth0 login"""
-    login_url = simple_auth0.get_login_url()
-    return redirect(login_url)
-
-@app.route('/callback')
-def auth0_callback():
-    """Handle Auth0 callback"""
-    try:
-        code = request.args.get('code')
-        if not code:
-            flash('Authentication failed: No authorization code received')
-            return redirect(url_for('index'))
-        
-        # Exchange code for token
-        token_data = simple_auth0.exchange_code_for_token(code)
-        if not token_data:
-            flash('Authentication failed: Could not exchange code for token')
-            return redirect(url_for('index'))
-        
-        # Get user info
-        user_info = simple_auth0.get_user_info(token_data['access_token'])
-        if not user_info:
-            flash('Authentication failed: Could not get user info')
-            return redirect(url_for('index'))
-        
-        # Store user info in session
-        session['auth0_user'] = user_info
-        session['profile'] = {
-            'user_id': user_info['sub'],
-            'name': user_info.get('name', ''),
-            'email': user_info.get('email', ''),
-            'picture': user_info.get('picture', ''),
-            'email_verified': user_info.get('email_verified', False)
-        }
-        
-        # Sync user to database
-        sync_auth0_user_to_database(user_info)
-        
-        flash(f'Welcome {user_info.get("name", "User")}!')
-        return redirect(url_for('user_dashboard'))
-        
-    except Exception as e:
-        print(f"Auth0 callback error: {e}")
-        flash('Authentication failed. Please try again.')
-        return redirect(url_for('index'))
-
-@app.route('/auth0/logout')
-def auth0_logout():
-    """Logout from Auth0"""
-    session.clear()
-    logout_url = simple_auth0.get_logout_url()
-    return redirect(logout_url)
-
-def sync_auth0_user_to_database(user_info):
-    """Sync Auth0 user to our database"""
-    global users_db
-    
-    email = user_info.get('email')
-    if not email:
-        return
-    
-    try:
-        # Check if user already exists
-        if email not in users_db:
-            # Create new user in our database
-            user_id = user_info['sub']  # Use Auth0 user ID
-            users_db[email] = {
-                'id': user_id,
-                'name': user_info.get('name', ''),
-                'email': email,
-                'phone': '',  # Auth0 doesn't provide phone by default
-                'location': '',
-                'password': '',  # No password needed for Auth0 users
-                'user_type': 'normal',
-                'status': 'approved',  # Auth0 users are pre-verified
-                'auth0_user_id': user_id,
-                'auth0_picture': user_info.get('picture', ''),
-                'email_verified': user_info.get('email_verified', False),
-                'created_at': datetime.utcnow().isoformat(),
-                'updated_at': datetime.utcnow().isoformat()
-            }
-            save_users(users_db)
-            print(f"Created new user from Auth0: {email}")
-        else:
-            # Update existing user with Auth0 info
-            users_db[email].update({
-                'auth0_user_id': user_info['sub'],
-                'auth0_picture': user_info.get('picture', ''),
-                'email_verified': user_info.get('email_verified', False),
-                'updated_at': datetime.utcnow().isoformat()
-            })
-            save_users(users_db)
-            print(f"Updated existing user from Auth0: {email}")
-    except Exception as e:
-        print(f"Error syncing Auth0 user to database: {e}")
-        # Don't fail the authentication if database sync fails
 
 @app.route('/register', methods=['GET', 'POST'])
 # @limiter.limit("3 per minute")  # Disabled for deployment
@@ -732,23 +629,23 @@ def register():
             return render_template('register.html', error='; '.join(duplicate_errors))
         
         try:
-            # Create new user
-            user_id = str(uuid.uuid4())
-            users_db[data['email']] = {
-                'id': user_id,
-                'name': data['name'],
-                'email': data['email'],
-                'phone': data['phone'],
-                'location': data['location'],
+        # Create new user
+        user_id = str(uuid.uuid4())
+        users_db[data['email']] = {
+            'id': user_id,
+            'name': data['name'],
+            'email': data['email'],
+            'phone': data['phone'],
+            'location': data['location'],
                 'password': generate_password_hash(data['password'], method='sha256'),
                 'user_type': 'normal',
                 'status': 'approved',  # Auto-approve normal users
-                'created_at': datetime.utcnow().isoformat(),
-                'updated_at': datetime.utcnow().isoformat()
-            }
-            
-            save_users(users_db)
-            log_activity('user_registration', f'New user registered: {data["email"]}')
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        save_users(users_db)
+        log_activity('user_registration', f'New user registered: {data["email"]}')
             flash('Registration successful! You can now login.')
             return redirect(url_for('login'))
             
@@ -797,41 +694,23 @@ def upload_documents(user_id):
 
 @app.route('/user_dashboard')
 def user_dashboard():
-	try:
-		# Check if user is authenticated via Auth0
-		if session.get('auth0_user'):
-			user_email = session['auth0_user'].get('email')
-			user = users_db.get(user_email)
-			
-			if not user:
-				flash('User not found in database')
-				return redirect(url_for('auth0_login'))
-		else:
-			# Fallback to session-based auth for admin users
-			if session.get('role') != 'user':
-				return redirect(url_for('login'))
-			
-			user = users_db.get(session['user_id'])
-			if not user:
-				flash('User not found')
-				return redirect(url_for('login'))
-		
-		events = list(events_db.values())
-		
-		# Convert datetime strings for templates
-		convert_datetime_strings(events)
-		
-		user_registrations = [r for r in registrations_db.values() if r['user_email'] == session['user_id']]
-		
-		# Convert datetime strings for registrations as well
-		convert_datetime_strings(user_registrations)
-		
-		return render_template('user_dashboard.html', user=user, events=events, registrations=user_registrations)
-	except Exception as e:
-		print(f"User dashboard error: {e}")
-		import traceback
-		traceback.print_exc()
-		return f"Error in user dashboard: {str(e)}", 500
+    if session.get('role') != 'user':
+        return redirect(url_for('login'))
+    
+    user = users_db.get(session['user_id'])
+    if not user:
+        flash('Please log in first')
+        return redirect(url_for('login'))
+    
+    events = list(events_db.values())
+    # Convert datetime strings for templates
+    convert_datetime_strings(events)
+    
+    user_registrations = [r for r in registrations_db.values() if r['user_email'] == session['user_id']]
+    # Convert datetime strings for registrations as well
+    convert_datetime_strings(user_registrations)
+    
+    return render_template('user_dashboard.html', user=user, events=events, registrations=user_registrations)
 
 @app.route('/admin/dashboard')
 @require_admin
@@ -1249,22 +1128,12 @@ def event_stats(event_id):
 
 @app.route('/logout')
 def logout():
-	# Check if user is authenticated via Auth0
-	if session.get('auth0_user'):
-		user_email = session['auth0_user'].get('email')
-		if user_email:
-			log_activity('logout', f'Auth0 user {user_email} logged out')
-		session.clear()
-		logout_url = simple_auth0.get_logout_url()
-		return redirect(logout_url)
-	else:
-		# Fallback to session-based logout
-		user_id = session.get('user_id')
-		if user_id:
-			log_activity('logout', f'User {user_id} logged out')
-		session.clear()
-		flash('Logged out successfully')
-		return redirect(url_for('index'))
+    user_id = session.get('user_id')
+    if user_id:
+        log_activity('logout', f'User {user_id} logged out')
+    session.clear()
+    flash('Logged out successfully')
+    return redirect(url_for('index'))
 
 # ============================================================================
 # POLITICAL PARTY ROUTES
@@ -1764,33 +1633,33 @@ def manage_volunteers(event_id):
 
 # Helper functions
 def convert_datetime_strings(data):
-	"""Convert datetime strings to datetime objects for templates"""
+    """Convert datetime strings to datetime objects for templates"""
 	try:
-		if isinstance(data, list):
-			for item in data:
-				convert_datetime_strings(item)
-		elif isinstance(data, dict):
-			for key, value in data.items():
-				if key == 'time' and isinstance(value, str):
-					try:
-						# Handle time strings like '18:00:00' FIRST
-						data[key] = datetime.strptime(value, '%H:%M:%S').time()
-					except Exception as e:
-						print(f"Error converting time: {value}, error: {e}")
-						data[key] = datetime.utcnow().time()
-				elif key == 'date' and isinstance(value, str):
-					try:
-						# Handle date strings like '2024-12-31'
-						data[key] = datetime.strptime(value, '%Y-%m-%d').date()
-					except Exception as e:
-						print(f"Error converting date: {value}, error: {e}")
-						data[key] = datetime.utcnow().date()
-				elif key in ['created_at', 'updated_at', 'check_in_time'] and isinstance(value, str):
-					try:
-						data[key] = datetime.fromisoformat(value)
-					except Exception as e:
-						print(f"Error converting {key}: {value}, error: {e}")
-						data[key] = datetime.utcnow()
+    if isinstance(data, list):
+        for item in data:
+            convert_datetime_strings(item)
+    elif isinstance(data, dict):
+        for key, value in data.items():
+            if key == 'time' and isinstance(value, str):
+                try:
+                    # Handle time strings like '18:00:00' FIRST
+                    data[key] = datetime.strptime(value, '%H:%M:%S').time()
+                except Exception as e:
+                    print(f"Error converting time: {value}, error: {e}")
+                    data[key] = datetime.utcnow().time()
+            elif key == 'date' and isinstance(value, str):
+                try:
+                    # Handle date strings like '2024-12-31'
+                    data[key] = datetime.strptime(value, '%Y-%m-%d').date()
+                except Exception as e:
+                    print(f"Error converting date: {value}, error: {e}")
+                    data[key] = datetime.utcnow().date()
+            elif key in ['created_at', 'updated_at', 'check_in_time'] and isinstance(value, str):
+                try:
+                    data[key] = datetime.fromisoformat(value)
+                except Exception as e:
+                    print(f"Error converting {key}: {value}, error: {e}")
+                    data[key] = datetime.utcnow()
 	except Exception as e:
 		print(f"DEBUG: Error in convert_datetime_strings: {e}")
 		import traceback

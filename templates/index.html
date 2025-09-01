@@ -13,8 +13,8 @@
             Streamline political events with secure user verification, QR code check-ins, and real-time attendance tracking.
         </p>
         <div class="hero-buttons">
-            <a href="{{ url_for('auth0_login') }}" class="btn btn-primary btn-lg" style="margin-right: 15px;">
-                <i class="fas fa-sign-in-alt"></i> Sign In as Volunteer
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg" style="margin-right: 15px;">
+                <i class="fas fa-user-plus"></i> Register as Volunteer
             </a>
             <a href="{{ url_for('register_political_party') }}" class="btn btn-secondary btn-lg" style="margin-right: 15px;">
                 <i class="fas fa-landmark"></i> Register Political Party
@@ -39,27 +39,38 @@
                     <p style="color: #666; margin-bottom: 20px;">Sign in as volunteer or admin to access your account</p>
                 </div>
                 
-                <div class="auth0-login-section">
-                    <div class="text-center mb-4">
-                        <p style="color: #666; margin-bottom: 20px;">
-                            <i class="fas fa-shield-alt"></i> Secure login powered by Auth0
-                        </p>
-                    </div>
-                    
+                <form method="POST" action="{{ url_for('login') }}" class="login-form">
                     <div class="form-group">
-                        <a href="{{ url_for('auth0_login') }}" class="btn btn-primary w-100" style="padding: 15px; font-size: 1.1rem;">
-                            <i class="fas fa-sign-in-alt"></i> Sign In with Auth0
-                        </a>
+                        <label for="volunteer_email" class="form-label">
+                            <i class="fas fa-envelope"></i> Email
+                        </label>
+                        <input type="email" id="volunteer_email" name="email" class="form-control" required 
+                               placeholder="Enter your email">
                     </div>
-                    
-                    <div class="text-center mt-3">
-                        <p style="color: #666; font-size: 0.9rem;">
-                            <i class="fas fa-info-circle"></i> New users will be automatically registered
-                        </p>
-                        <p style="color: #999; font-size: 0.8rem; margin-top: 5px;">
-                            <i class="fas fa-shield-alt"></i> Secure authentication with email verification
-                        </p>
+
+                    <div class="form-group">
+                        <label for="volunteer_password" class="form-label">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <input type="password" id="volunteer_password" name="password" class="form-control" required 
+                               placeholder="Enter your password">
                     </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-sign-in-alt"></i> Sign In
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p style="color: #666; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle"></i> New user? 
+                        <a href="{{ url_for('register') }}" style="color: #667eea;">Register here</a>
+                    </p>
+                    <p style="color: #999; font-size: 0.8rem; margin-top: 5px;">
+                        <i class="fas fa-shield-alt"></i> Secure authentication with password protection
+                    </p>
                 </div>
             </div>
 
