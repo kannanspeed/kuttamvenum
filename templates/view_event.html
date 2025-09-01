@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}View Event - Political Event Management{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="fas fa-calendar-alt"></i> {{ event.title }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="event-details">
+                        <p><strong>Description:</strong> {{ event.description }}</p>
+                        <p><strong>Location:</strong> {{ event.location }}</p>
+                        <p><strong>Date:</strong> 
+                            {% if event.date is string %}
+                                {{ event.date }}
+                            {% else %}
+                                {{ event.date.strftime('%B %d, %Y') }}
+                            {% endif %}
+                        </p>
+                        <p><strong>Time:</strong> 
+                            {% if event.time is string %}
+                                {{ event.time }}
+                            {% else %}
+                                {{ event.time.strftime('%I:%M %p') }}
+                            {% endif %}
+                        </p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge bg-{% if event.status == 'upcoming' %}primary{% elif event.status == 'ongoing' %}success{% else %}secondary{% endif %}">
+                                {{ event.status.title() }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> Registrations ({{ registrations|length }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if registrations %}
+                        {% for registration in registrations %}
+                        <div class="registration-item mb-2 p-2 border rounded">
+                            <strong>{{ registration.user_email }}</strong><br>
+                            <small class="text-muted">
+                                Registered: 
+                                {% if registration.created_at is string %}
+                                    {{ registration.created_at }}
+                                {% else %}
+                                    {{ registration.created_at.strftime('%B %d, %Y') }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No registrations yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <a href="{{ url_for('political_party_dashboard' if session.get('user_type') == 'political_party' else 'user_dashboard') }}" 
+           class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        
+        {% if session.get('user_type') == 'political_party' %}
+        <a href="{{ url_for('edit_event', event_id=event.id) }}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Edit Event
+        </a>
+        <a href="{{ url_for('manage_volunteers', event_id=event.id) }}" class="btn btn-success">
+            <i class="fas fa-users"></i> Manage Volunteers
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

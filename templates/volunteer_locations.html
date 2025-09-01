@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Volunteer Locations - Political Event Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="fas fa-map-marked-alt"></i> Volunteer Locations Map
+                    </h3>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map" style="height: 600px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> Volunteers with Location Data ({{ volunteers|length }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if volunteers %}
+                        <div class="volunteer-list" style="max-height: 500px; overflow-y: auto;">
+                            {% for volunteer in volunteers %}
+                            <div class="volunteer-item mb-3 p-3 border rounded" 
+                                 onclick="focusOnVolunteer({{ volunteer.latitude }}, {{ volunteer.longitude }}, '{{ volunteer.name }}')"
+                                 style="cursor: pointer; transition: all 0.3s ease;">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ volunteer.name }}</h6>
+                                        <p class="mb-1 text-muted small">{{ volunteer.email }}</p>
+                                        <p class="mb-1 text-muted small">{{ volunteer.phone }}</p>
+                                        <p class="mb-1">
+                                            <strong>Event:</strong> {{ volunteer.event_title }}
+                                        </p>
+                                        <p class="mb-1">
+                                            <strong>Location:</strong> 
+                                            {% if volunteer.user_location %}
+                                                {{ volunteer.user_location }}
+                                            {% else %}
+                                                {{ volunteer.location }}
+                                            {% endif %}
+                                        </p>
+                                        <p class="mb-0 text-muted small">
+                                            Registered: 
+                                            {% if volunteer.registration_date is string %}
+                                                {{ volunteer.registration_date }}
+                                            {% else %}
+                                                {{ volunteer.registration_date.strftime('%B %d, %Y') }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    <div class="ms-2">
+                                        <span class="badge bg-primary">📍</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h6>Summary:</h6>
+                            <p><strong>Total Volunteers with Location:</strong> {{ volunteers|length }}</p>
+                            <p><strong>Events Covered:</strong> {{ volunteers|map(attribute='event_title')|unique|list|length }}</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-map-marker-alt" style="font-size: 3rem; color: #ccc; margin-bottom: 20px;"></i>
+                            <h5>No Location Data</h5>
+                            <p class="text-muted">No volunteers have registered for events with location data yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <a href="{{ url_for('political_party_dashboard') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<style>
+.volunteer-item:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#map {
+    border-radius: 8px;
+}
+
+.volunteer-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.volunteer-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.volunteer-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.volunteer-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
+
+<script>
+let map;
+let markers = [];
+let infoWindows = [];
+
+function initMap() {
+    // Initialize map centered on India
+    map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 20.5937, lng: 78.9629 }, // Center of India
+        zoom: 5,
+        styles: [
+            {
+                featureType: 'poi',
+                elementType: 'labels',
+                stylers: [{ visibility: 'off' }]
+            }
+        ]
+    });
+    
+    // Add markers for each volunteer
+    {% for volunteer in volunteers %}
+    addVolunteerMarker({{ volunteer.latitude }}, {{ volunteer.longitude }}, {
+        name: '{{ volunteer.name }}',
+        email: '{{ volunteer.email }}',
+        phone: '{{ volunteer.phone }}',
+        event: '{{ volunteer.event_title }}',
+        location: '{% if volunteer.user_location %}{{ volunteer.user_location }}{% else %}{{ volunteer.location }}{% endif %}',
+        registrationDate: '{% if volunteer.registration_date is string %}{{ volunteer.registration_date }}{% else %}{{ volunteer.registration_date.strftime('%B %d, %Y') }}{% endif %}'
+    });
+    {% endfor %}
+}
+
+function addVolunteerMarker(lat, lng, volunteerInfo) {
+    const marker = new google.maps.Marker({
+        position: { lat: lat, lng: lng },
+        map: map,
+        title: volunteerInfo.name,
+        icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="16" cy="16" r="16" fill="#667eea" opacity="0.8"/>
+                    <circle cx="16" cy="16" r="8" fill="white"/>
+                    <circle cx="16" cy="16" r="4" fill="#667eea"/>
+                </svg>
+            `),
+            scaledSize: new google.maps.Size(32, 32),
+            anchor: new google.maps.Point(16, 16)
+        }
+    });
+    
+    const infoWindow = new google.maps.InfoWindow({
+        content: `
+            <div style="padding: 10px; max-width: 250px;">
+                <h6 style="margin: 0 0 8px 0; color: #667eea;">${volunteerInfo.name}</h6>
+                <p style="margin: 2px 0; font-size: 12px;"><strong>Email:</strong> ${volunteerInfo.email}</p>
+                <p style="margin: 2px 0; font-size: 12px;"><strong>Phone:</strong> ${volunteerInfo.phone}</p>
+                <p style="margin: 2px 0; font-size: 12px;"><strong>Event:</strong> ${volunteerInfo.event}</p>
+                <p style="margin: 2px 0; font-size: 12px;"><strong>Location:</strong> ${volunteerInfo.location}</p>
+                <p style="margin: 2px 0; font-size: 12px;"><strong>Registered:</strong> ${volunteerInfo.registrationDate}</p>
+            </div>
+        `
+    });
+    
+    marker.addListener('click', () => {
+        // Close all other info windows
+        infoWindows.forEach(iw => iw.close());
+        infoWindow.open(map, marker);
+    });
+    
+    markers.push(marker);
+    infoWindows.push(infoWindow);
+}
+
+function focusOnVolunteer(lat, lng, name) {
+    const position = { lat: lat, lng: lng };
+    
+    // Pan to volunteer location
+    map.panTo(position);
+    map.setZoom(12);
+    
+    // Find and open the info window for this volunteer
+    const markerIndex = markers.findIndex(marker => 
+        marker.getPosition().lat() === lat && marker.getPosition().lng() === lng
+    );
+    
+    if (markerIndex !== -1) {
+        // Close all other info windows
+        infoWindows.forEach(iw => iw.close());
+        // Open this volunteer's info window
+        infoWindows[markerIndex].open(map, markers[markerIndex]);
+    }
+}
+
+// Initialize map when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if Google Maps is loaded
+    if (typeof google !== 'undefined' && google.maps) {
+        initMap();
+    } else {
+        // Show fallback message
+        document.getElementById('map').innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f8f9fa; border-radius: 8px;">
+                <div style="text-align: center; color: #6c757d;">
+                    <i class="fas fa-map" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                    <h5>Google Maps Not Available</h5>
+                    <p>Please check your internet connection and Google Maps API key.</p>
+                </div>
+            </div>
+        `;
+    }
+});
+</script>
+
+<!-- Google Maps API -->
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC4VX_V-P58o0lS1OTAkpfqqRPeNoc61z0&callback=initMap">
+</script>
+{% endblock %}

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waiting for Approval - Political Event Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .approval-container {
+            text-align: center;
+            padding: 50px 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .dog-animation {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 30px;
+            position: relative;
+        }
+        
+        .dog {
+            width: 100px;
+            height: 100px;
+            background: #FF6B6B;
+            border-radius: 50px 50px 20px 20px;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: jump 1s infinite ease-in-out;
+        }
+        
+        .dog::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 20px;
+            width: 20px;
+            height: 20px;
+            background: #FF6B6B;
+            border-radius: 50%;
+        }
+        
+        .dog::after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            width: 20px;
+            height: 20px;
+            background: #FF6B6B;
+            border-radius: 50%;
+        }
+        
+        .dog-ear-left {
+            position: absolute;
+            top: -25px;
+            left: 15px;
+            width: 15px;
+            height: 25px;
+            background: #FF6B6B;
+            border-radius: 15px 15px 0 0;
+            transform: rotate(-30deg);
+        }
+        
+        .dog-ear-right {
+            position: absolute;
+            top: -25px;
+            right: 15px;
+            width: 15px;
+            height: 25px;
+            background: #FF6B6B;
+            border-radius: 15px 15px 0 0;
+            transform: rotate(30deg);
+        }
+        
+        .dog-eye-left {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            width: 8px;
+            height: 8px;
+            background: #333;
+            border-radius: 50%;
+        }
+        
+        .dog-eye-right {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            width: 8px;
+            height: 8px;
+            background: #333;
+            border-radius: 50%;
+        }
+        
+        .dog-nose {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background: #333;
+            border-radius: 50%;
+        }
+        
+        .dog-tail {
+            position: absolute;
+            bottom: 20px;
+            right: -15px;
+            width: 30px;
+            height: 8px;
+            background: #FF6B6B;
+            border-radius: 4px;
+            animation: wag 0.5s infinite ease-in-out;
+        }
+        
+        @keyframes jump {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-20px); }
+        }
+        
+        @keyframes wag {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(20deg); }
+        }
+        
+        .waiting-message {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+        
+        .waiting-message h2 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        
+        .waiting-message p {
+            color: #6c757d;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            background: #FFC107;
+            color: #212529;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        
+        .info-box {
+            background: #E3F2FD;
+            border: 1px solid #BBDEFB;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .info-box h3 {
+            color: #1976D2;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .info-box ul {
+            text-align: left;
+            color: #424242;
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .info-box li {
+            margin-bottom: 8px;
+        }
+        
+        .logout-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: #5a6268;
+        }
+        
+        .refresh-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="approval-container">
+            <div class="dog-animation">
+                <div class="dog">
+                    <div class="dog-ear-left"></div>
+                    <div class="dog-ear-right"></div>
+                    <div class="dog-eye-left"></div>
+                    <div class="dog-eye-right"></div>
+                    <div class="dog-nose"></div>
+                    <div class="dog-tail"></div>
+                </div>
+            </div>
+            
+            <div class="waiting-message">
+                <h2>🐕 Woof! We're reviewing your application!</h2>
+                <p>Thank you for registering with our Political Event Management System. Our admin team is currently reviewing your application.</p>
+                
+                <div class="status-badge">
+                    📋 Status: Pending Approval
+                </div>
+                
+                <p>You'll receive an email notification once your account is approved. This usually takes 24-48 hours.</p>
+            </div>
+            
+            <div class="info-box">
+                <h3>📋 What happens next?</h3>
+                <ul>
+                    <li>✅ Admin team reviews your registration details</li>
+                    <li>✅ Verification of your information</li>
+                    <li>✅ Approval or rejection notification via email</li>
+                    <li>✅ Access to platform features upon approval</li>
+                </ul>
+            </div>
+            
+            {% if user_type == 'political_party' %}
+            <div class="info-box">
+                <h3>🏛️ Political Party Registration</h3>
+                <ul>
+                    <li>✅ Organization email verification</li>
+                    <li>✅ Party domain validation</li>
+                    <li>✅ Admin approval for party events</li>
+                    <li>✅ Access to volunteer management tools</li>
+                </ul>
+            </div>
+            {% endif %}
+            
+            <div class="info-box">
+                <h3>📞 Need help?</h3>
+                <p>If you have any questions or need assistance, please contact our support team:</p>
+                <ul>
+                    <li>📧 Email: support@politicalevents.com</li>
+                    <li>📱 Phone: +1-800-POLITICAL</li>
+                    <li>💬 Live Chat: Available on approved accounts</li>
+                </ul>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <button class="refresh-btn" onclick="location.reload()">
+                    🔄 Refresh Status
+                </button>
+                <button class="logout-btn" onclick="window.location.href='/logout'">
+                    🚪 Logout
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh every 30 seconds to check approval status
+        setInterval(function() {
+            fetch('/check_approval_status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.approved) {
+                        window.location.href = data.redirect_url;
+                    }
+                })
+                .catch(error => console.log('Status check failed:', error));
+        }, 30000);
+    </script>
+</body>
+</html>
+
+
+

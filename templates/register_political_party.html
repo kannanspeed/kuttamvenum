@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Political Party Registration - Political Event Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .political-party-form {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .form-header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .form-header p {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+        
+        .party-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .email-validation {
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        
+        .email-validation.valid {
+            color: #27ae60;
+        }
+        
+        .email-validation.invalid {
+            color: #e74c3c;
+        }
+        
+        .requirements {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .requirements h3 {
+            color: #1976d2;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .requirements ul {
+            margin: 0;
+            padding-left: 20px;
+            color: #424242;
+        }
+        
+        .requirements li {
+            margin-bottom: 8px;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .submit-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            background: #ffebee;
+            border: 1px solid #ffcdd2;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .success-message {
+            background: #e8f5e8;
+            border: 1px solid #c8e6c9;
+            color: #2e7d32;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="political-party-form">
+            <div class="form-header">
+                <div class="party-badge">🏛️ Political Party Registration</div>
+                <h1>Register Your Political Party</h1>
+                <p>Join our platform to manage events and coordinate volunteers effectively</p>
+            </div>
+            
+            {% if error %}
+            <div class="error-message">
+                {{ error }}
+            </div>
+            {% endif %}
+            
+            {% if success %}
+            <div class="success-message">
+                {{ success }}
+            </div>
+            {% endif %}
+            
+            <div class="requirements">
+                <h3>📋 Registration Requirements</h3>
+                <ul>
+                    <li>✅ Must use official organization email domain</li>
+                    <li>✅ Valid political party identification</li>
+                    <li>✅ Complete party information</li>
+                    <li>✅ Aadhaar card (front and back) for verification</li>
+                    <li>✅ Selfie photo for identity verification</li>
+                    <li>✅ Admin approval required (24-48 hours)</li>
+                    <li>✅ Compliance with local election laws</li>
+                </ul>
+            </div>
+            
+            <form method="POST" action="{{ url_for('register_political_party') }}" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="party_name">🏛️ Political Party Name *</label>
+                    <input type="text" id="party_name" name="party_name" required 
+                           placeholder="Enter your political party name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="name">👤 Contact Person Name *</label>
+                    <input type="text" id="name" name="name" required 
+                           placeholder="Enter contact person's full name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="organization_email">📧 Organization Email *</label>
+                    <input type="email" id="organization_email" name="organization_email" required 
+                           placeholder="admin@yourparty.org" onblur="validateEmail(this.value)">
+                    <div id="email-validation" class="email-validation"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">📱 Phone Number *</label>
+                    <input type="tel" id="phone" name="phone" required 
+                           placeholder="Enter contact phone number">
+                </div>
+                
+                <div class="form-group">
+                    <label for="whatsapp_phone">📱 WhatsApp Number</label>
+                    <input type="tel" id="whatsapp_phone" name="whatsapp_phone" 
+                           placeholder="Enter WhatsApp number (optional)">
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">📍 Party Headquarters *</label>
+                    <input type="text" id="location" name="location" required 
+                           placeholder="Enter party headquarters address">
+                </div>
+                
+                <div class="form-group">
+                    <label for="party_domain">🌐 Party Website Domain</label>
+                    <input type="url" id="party_domain" name="party_domain" 
+                           placeholder="https://yourparty.org">
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">📝 Party Description</label>
+                    <textarea id="description" name="description" rows="4" 
+                              placeholder="Brief description of your political party and its mission"></textarea>
+                </div>
+                
+                <!-- Document Upload Section -->
+                <div class="document-section" style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; border: 2px dashed #667eea;">
+                    <h3 style="color: #667eea; margin-bottom: 20px; text-align: center;">
+                        📄 Document Verification Required
+                    </h3>
+                    <p style="color: #666; text-align: center; margin-bottom: 20px;">
+                        Please upload the following documents for verification. All documents are required for approval.
+                    </p>
+                    
+                    <div class="form-group">
+                        <label for="adhar_front">🆔 Aadhaar Card (Front Side) *</label>
+                        <input type="file" id="adhar_front" name="adhar_front" accept="image/*" required 
+                               style="padding: 10px; border: 2px solid #e9ecef; border-radius: 8px; background: white;">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Upload clear image of Aadhaar card front side (JPG, PNG, PDF)
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="adhar_back">🆔 Aadhaar Card (Back Side) *</label>
+                        <input type="file" id="adhar_back" name="adhar_back" accept="image/*" required 
+                               style="padding: 10px; border: 2px solid #e9ecef; border-radius: 8px; background: white;">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Upload clear image of Aadhaar card back side (JPG, PNG, PDF)
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="selfie">📸 Selfie Photo *</label>
+                        <input type="file" id="selfie" name="selfie" accept="image/*" required 
+                               style="padding: 10px; border: 2px solid #e9ecef; border-radius: 8px; background: white;">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Upload a clear selfie photo for identity verification (JPG, PNG)
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">🔒 Password *</label>
+                    <input type="password" id="password" name="password" required 
+                           placeholder="Create a strong password">
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm_password">🔒 Confirm Password *</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required 
+                           placeholder="Confirm your password">
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submit-btn">
+                    🏛️ Register Political Party
+                </button>
+            </form>
+            
+            <div class="login-link">
+                <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+                <p>Want to register as a volunteer? <a href="{{ url_for('register') }}">Register here</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function validateEmail(email) {
+            const validationDiv = document.getElementById('email-validation');
+            const submitBtn = document.getElementById('submit-btn');
+            
+            // Check if it's a Gmail address
+            if (email.toLowerCase().includes('@gmail.com') || 
+                email.toLowerCase().includes('@yahoo.com') || 
+                email.toLowerCase().includes('@hotmail.com') ||
+                email.toLowerCase().includes('@outlook.com')) {
+                validationDiv.textContent = '❌ Personal email addresses are not allowed. Please use your organization email.';
+                validationDiv.className = 'email-validation invalid';
+                submitBtn.disabled = true;
+                return false;
+            }
+            
+            // Check if it looks like an organization email
+            if (email.includes('@') && email.split('@')[1].includes('.')) {
+                validationDiv.textContent = '✅ Valid organization email format';
+                validationDiv.className = 'email-validation valid';
+                submitBtn.disabled = false;
+                return true;
+            } else {
+                validationDiv.textContent = '❌ Please enter a valid organization email address';
+                validationDiv.className = 'email-validation invalid';
+                submitBtn.disabled = true;
+                return false;
+            }
+        }
+        
+        // Password confirmation validation
+        document.getElementById('confirm_password').addEventListener('input', function() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = this.value;
+            const submitBtn = document.getElementById('submit-btn');
+            
+            if (password !== confirmPassword) {
+                this.style.borderColor = '#e74c3c';
+                submitBtn.disabled = true;
+            } else {
+                this.style.borderColor = '#27ae60';
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            const email = document.getElementById('organization_email').value;
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                showPopup('Passwords do not match!', 'error');
+                return false;
+            }
+            
+            if (!validateEmail(email)) {
+                e.preventDefault();
+                showPopup('Please use a valid organization email address!', 'error');
+                return false;
+            }
+        });
+        
+        // Popup functionality
+        function showPopup(message, type = 'info') {
+            // Remove existing popup
+            const existingPopup = document.getElementById('popup');
+            if (existingPopup) {
+                existingPopup.remove();
+            }
+            
+            // Create popup
+            const popup = document.createElement('div');
+            popup.id = 'popup';
+            popup.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: ${type === 'error' ? '#ffebee' : '#e8f5e8'};
+                border: 2px solid ${type === 'error' ? '#f44336' : '#4caf50'};
+                color: ${type === 'error' ? '#c62828' : '#2e7d32'};
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                z-index: 10000;
+                max-width: 400px;
+                text-align: center;
+                font-weight: bold;
+            `;
+            
+            popup.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 'check-circle'}" 
+                       style="font-size: 2rem; color: ${type === 'error' ? '#f44336' : '#4caf50'};"></i>
+                </div>
+                <div style="margin-bottom: 20px;">${message}</div>
+                <button onclick="closePopup()" style="
+                    background: ${type === 'error' ? '#f44336' : '#4caf50'};
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-weight: bold;
+                ">OK</button>
+            `;
+            
+            // Add overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 9999;
+            `;
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+        }
+        
+        function closePopup() {
+            const popup = document.getElementById('popup');
+            const overlay = document.getElementById('overlay');
+            if (popup) popup.remove();
+            if (overlay) overlay.remove();
+        }
+        
+        // Check for server-side errors and show popup
+        {% if error %}
+            showPopup('{{ error }}', 'error');
+        {% endif %}
+    </script>
+</body>
+</html>

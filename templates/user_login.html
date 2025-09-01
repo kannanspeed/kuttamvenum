@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Volunteer Login - Political Event Management{% endblock %}
+
+{% block content %}
+<div class="login-container" style="min-height: 80vh; display: flex; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 400px; width: 100%;">
+        <div class="text-center mb-4">
+            <i class="fas fa-user" style="font-size: 3rem; color: #667eea; margin-bottom: 20px;"></i>
+            <h2 style="color: #333; margin-bottom: 10px;">Volunteer Login</h2>
+            <p style="color: #666;">Sign in to access events and manage your registrations</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('user_login') }}">
+            <div class="form-group">
+                <label for="email" class="form-label">
+                    <i class="fas fa-envelope"></i> Email Address
+                </label>
+                <input type="email" id="email" name="email" class="form-control" required 
+                       placeholder="Enter your email address">
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock"></i> Password
+                </label>
+                <input type="password" id="password" name="password" class="form-control" required 
+                       placeholder="Enter your password">
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-sign-in-alt"></i> Sign In as Volunteer
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center mt-4">
+            <p style="color: #666; margin-bottom: 15px;">
+                New volunteer? 
+                <a href="{{ url_for('register') }}" style="color: #667eea; text-decoration: none; font-weight: 600;">
+                    Register here
+                </a>
+            </p>
+            <p style="color: #666; font-size: 0.9rem;">
+                <a href="{{ url_for('index') }}" style="color: #667eea; text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+
+<style>
+.login-container {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 20px;
+    margin: 20px;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.form-label {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.form-label i {
+    margin-right: 8px;
+    color: #667eea;
+}
+
+@media (max-width: 480px) {
+    .login-container {
+        margin: 10px;
+    }
+    
+    .card {
+        padding: 20px;
+    }
+}
+</style>
+{% endblock %}
+
+
+

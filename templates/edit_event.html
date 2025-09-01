@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Add Event - Political Event Management{% endblock %}
+{% block title %}Edit Event - Political Event Management{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
@@ -9,7 +9,7 @@
             <div class="card">
                 <div class="card-header">
                     <h3 class="mb-0">
-                        <i class="fas fa-calendar-plus"></i> Create New Event
+                        <i class="fas fa-edit"></i> Edit Event: {{ event.title }}
                     </h3>
                 </div>
                 <div class="card-body">
@@ -25,7 +25,7 @@
                                 <i class="fas fa-heading"></i> Event Title *
                             </label>
                             <input type="text" class="form-control" id="title" name="title" required 
-                                   placeholder="Enter event title">
+                                   value="{{ event.title }}" placeholder="Enter event title">
                         </div>
                         
                         <div class="form-group mb-3">
@@ -33,7 +33,7 @@
                                 <i class="fas fa-align-left"></i> Event Description *
                             </label>
                             <textarea class="form-control" id="description" name="description" rows="4" required 
-                                      placeholder="Describe the event details, agenda, and requirements"></textarea>
+                                      placeholder="Describe the event details, agenda, and requirements">{{ event.description }}</textarea>
                         </div>
                         
                         <div class="form-group mb-3">
@@ -41,7 +41,7 @@
                                 <i class="fas fa-map-marker-alt"></i> Event Location *
                             </label>
                             <input type="text" class="form-control" id="location" name="location" required 
-                                   placeholder="Enter event venue/location">
+                                   value="{{ event.location }}" placeholder="Enter event venue/location">
                         </div>
                         
                         <div class="row">
@@ -50,7 +50,8 @@
                                     <label for="date" class="form-label">
                                         <i class="fas fa-calendar"></i> Event Date *
                                     </label>
-                                    <input type="date" class="form-control" id="date" name="date" required>
+                                    <input type="date" class="form-control" id="date" name="date" required
+                                           value="{% if event.date is string %}{{ event.date }}{% else %}{{ event.date.strftime('%Y-%m-%d') }}{% endif %}">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -58,7 +59,8 @@
                                     <label for="time" class="form-label">
                                         <i class="fas fa-clock"></i> Event Time *
                                     </label>
-                                    <input type="time" class="form-control" id="time" name="time" required>
+                                    <input type="time" class="form-control" id="time" name="time" required
+                                           value="{% if event.time is string %}{{ event.time }}{% else %}{{ event.time.strftime('%H:%M') }}{% endif %}">
                                 </div>
                             </div>
                         </div>
@@ -67,8 +69,8 @@
                             <a href="{{ url_for('political_party_dashboard') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Back to Dashboard
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Create Event
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save"></i> Update Event
                             </button>
                         </div>
                     </form>
@@ -83,4 +85,3 @@
 document.getElementById('date').min = new Date().toISOString().split('T')[0];
 </script>
 {% endblock %}
-

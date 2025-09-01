@@ -1,202 +1,198 @@
-# Political Event Management System
+# 🚀 Political Event Management System
 
-A comprehensive web application for managing political events, user registrations, and event attendance tracking with QR code functionality.
+A comprehensive platform for managing political events, volunteer coordination, and party administration.
 
-## Features
+## ✨ Features
 
-- **User Management**: Registration, approval system, and profile management
-- **Event Management**: Create, manage, and track political events
-- **QR Code Integration**: Generate and scan QR codes for event check-ins
-- **Admin Dashboard**: Comprehensive admin interface for managing users and events
-- **Activity Logging**: Track all user and admin activities
-- **Email Notifications**: Automated email notifications for approvals/rejections
-- **Security**: JWT authentication, rate limiting, input validation, and file encryption
+### Core Features
+- **User Management** - Registration, approval, and profile management
+- **Event Management** - Create, manage, and track political events
+- **Volunteer Coordination** - Register volunteers and track participation
+- **Admin Dashboard** - Comprehensive admin interface with analytics
+- **Activity Logging** - Track all user and admin activities
+- **File Management** - Secure document upload and storage
 
-## Tech Stack
+### Advanced Features
+- **WhatsApp Integration** - OTP verification and group management
+- **Google Maps** - Location-based services and mapping
+- **Freshdesk CRM** - Support ticket system
+- **Auto Matcher** - Intelligent volunteer-event matching
+- **Political Party Verification** - Email domain verification for party admins
+- **Terms & Conditions** - Legal framework and compliance
 
-- **Backend**: Flask (Python)
-- **Frontend**: HTML, CSS, JavaScript
-- **Database**: File-based storage with pickle
-- **Authentication**: JWT tokens
-- **Security**: Werkzeug password hashing, input sanitization
-- **QR Codes**: qrcode library
-- **Email**: Flask-Mail
+## 🛠️ Technology Stack
 
-## Deployment on Render
+- **Backend**: Flask, SQLAlchemy, Python
+- **Database**: SQLite (development), PostgreSQL (production)
+- **Authentication**: JWT, SHA256 password hashing
+- **Security**: Input validation, file encryption, CSP headers
+- **APIs**: WhatsApp Business, Google Maps, Freshdesk CRM
+- **Deployment**: Gunicorn, Render
+
+## 🚀 Quick Start
 
 ### Prerequisites
+- Python 3.10+
+- pip package manager
 
-1. A Render account (free tier available)
-2. A GitHub repository with your code
-3. Gmail account for email notifications (optional)
+### Installation
 
-### Step-by-Step Deployment
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd political-event-management
+   ```
 
-#### 1. Prepare Your Repository
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Ensure your repository contains these files:
-- `app.py` - Main Flask application
-- `requirements.txt` - Python dependencies
-- `render.yaml` - Render configuration (optional)
-- `runtime.txt` - Python version specification
-- `templates/` - HTML templates
-- `static/` - CSS, JS, and other static files
+3. **Create environment file**
+   ```bash
+   cp env_template.txt .env
+   # Edit .env with your configuration
+   ```
 
-#### 2. Deploy on Render
+4. **Initialize database**
+   ```bash
+   flask db init
+   flask db migrate -m "Initial migration"
+   flask db upgrade
+   ```
 
-**Option A: Using render.yaml (Recommended)**
+5. **Run the application**
+   ```bash
+   python app.py
+   ```
 
-1. Push your code to GitHub
-2. Go to [Render Dashboard](https://dashboard.render.com/)
-3. Click "New +" and select "Blueprint"
-4. Connect your GitHub repository
-5. Render will automatically detect the `render.yaml` file
-6. Click "Apply" to deploy
+6. **Access the application**
+   - URL: http://127.0.0.1:5000
+   - Admin Login: admin@political.com / admin123
 
-**Option B: Manual Deployment**
+## 📋 Environment Configuration
 
-1. Go to [Render Dashboard](https://dashboard.render.com/)
-2. Click "New +" and select "Web Service"
-3. Connect your GitHub repository
-4. Configure the service:
-   - **Name**: `political-event-management`
-   - **Environment**: `Python`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `gunicorn app:app`
-   - **Plan**: Free
+Create a `.env` file with the following variables:
 
-#### 3. Environment Variables
+```env
+# Flask Configuration
+SECRET_KEY=your-super-secret-key-change-this-in-production
+JWT_SECRET_KEY=your-jwt-secret-key-change-this-in-production
 
-Set these environment variables in your Render service:
+# Database Configuration
+DATABASE_URL=sqlite:///political_platform.db
 
-**Required:**
-- `SECRET_KEY` - Flask secret key (auto-generated)
-- `JWT_SECRET_KEY` - JWT signing key (auto-generated)
-- `ENCRYPTION_KEY` - File encryption key (auto-generated)
+# Encryption Key
+ENCRYPTION_KEY=your-32-byte-encryption-key-here
 
-**Optional (for email notifications):**
-- `MAIL_SERVER` - SMTP server (e.g., `smtp.gmail.com`)
-- `MAIL_PORT` - SMTP port (e.g., `587`)
-- `MAIL_USE_TLS` - Use TLS (e.g., `true`)
-- `MAIL_USERNAME` - Your email address
-- `MAIL_PASSWORD` - Your email password or app password
-- `MAIL_DEFAULT_SENDER` - Default sender email
+# Optional: WhatsApp Business API
+WHATSAPP_ACCESS_TOKEN=your-whatsapp-access-token
+WHATSAPP_PHONE_NUMBER_ID=your-whatsapp-phone-number-id
 
-#### 4. Gmail Setup (Optional)
+# Optional: Google Maps API
+GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 
-If you want email notifications:
+# Optional: Freshdesk CRM
+FRESHDESK_API_KEY=your-freshdesk-api-key
+FRESHDESK_DOMAIN=your-domain.freshdesk.com
 
-1. Enable 2-factor authentication on your Gmail account
-2. Generate an App Password:
-   - Go to Google Account settings
-   - Security → 2-Step Verification → App passwords
-   - Generate a password for "Mail"
-3. Use this app password in the `MAIL_PASSWORD` environment variable
+# Optional: Email (Gmail)
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-app-password
+MAIL_DEFAULT_SENDER=admin@political.com
 
-### Default Credentials
+# Optional: Redis (for background tasks)
+REDIS_URL=redis://localhost:6379/0
+```
 
-After deployment, you can log in with:
-- **Admin**: `admin@political.com` / `admin123`
+## 🔧 API Endpoints
+
+### Core Endpoints
+- `GET /` - Home page
+- `GET /login` - Login page
+- `POST /login` - User authentication
+- `GET /register` - Registration page
+- `POST /register` - User registration
+- `GET /user_dashboard` - User dashboard
+- `GET /admin_dashboard` - Admin dashboard
+
+### API Endpoints
+- `POST /api/whatsapp/send-otp` - Send WhatsApp OTP
+- `POST /api/whatsapp/verify-otp` - Verify WhatsApp OTP
+- `POST /api/whatsapp/create-group` - Create WhatsApp group
+- `POST /api/support/ticket` - Create support ticket
+- `GET /api/support/tickets` - Get support tickets
+- `GET /api/matching/volunteers/<event_id>` - Find matching volunteers
+- `POST /api/matching/auto-assign` - Auto-assign volunteers
+- `POST /api/maps/geocode` - Geocode address
+- `POST /api/maps/distance` - Calculate distance
+- `GET /api/maps/event-map/<event_id>` - Get event map
+- `GET /terms` - Terms and conditions
+
+## 📊 Database Models
+
+- **User** - User profiles and verification
+- **Event** - Event management and details
+- **Registration** - Event participation tracking
+- **WhatsAppGroup** - Communication group management
+- **SupportTicket** - CRM integration
+- **VolunteerSkill** - Skill-based matching
+- **AutoMatch** - Matching algorithm results
+- **UserAgreement** - Terms acceptance tracking
+- **AdminUser** - Admin user management
+- **ActivityLog** - Activity tracking
+
+## 🔐 Security Features
+
+- **JWT Authentication** - Secure session management
+- **Password Hashing** - SHA256 with salt
+- **Input Validation** - Comprehensive data validation
+- **File Encryption** - Secure document storage
+- **CSP Headers** - Content Security Policy
+- **Rate Limiting** - API protection (configurable)
+
+## 🚀 Deployment
 
 ### Local Development
-
-1. Clone the repository:
-```bash
-git clone <your-repo-url>
-cd political-event-management
-```
-
-2. Create a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-4. Run the application:
-```bash
+   ```bash
 python app.py
 ```
 
-5. Access the application at `http://localhost:5000`
+### Production Deployment
+1. Set `FLASK_ENV=production` in `.env`
+2. Configure production database URL
+3. Set secure session cookies
+4. Use Gunicorn or similar WSGI server
 
-### File Structure
+### Render Deployment
+- Already configured with `render.yaml`
+- Automatic deployment from GitHub
+- Environment variables configured in Render dashboard
 
-```
-political-event-management/
-├── app.py                 # Main Flask application
-├── requirements.txt       # Python dependencies
-├── render.yaml           # Render deployment config
-├── runtime.txt           # Python version
-├── .gitignore           # Git ignore file
-├── README.md            # This file
-├── templates/           # HTML templates
-│   ├── base.html
-│   ├── login.html
-│   ├── register.html
-│   ├── admin_dashboard.html
-│   ├── user_dashboard.html
-│   └── ...
-├── static/              # Static files
-│   ├── css/
-│   ├── js/
-│   └── uploads/
-└── data/               # Data storage (created automatically)
-    ├── users.pkl
-    ├── events.pkl
-    ├── admin.pkl
-    └── ...
-```
+## 📞 Support
 
-### Security Features
+For support and questions:
+- Check the `UPDATED_MINIMAL_SETUP.md` for detailed setup instructions
+- Review application logs for error messages
+- Use the support ticket system for issues
 
-- **Password Hashing**: Secure password storage using Werkzeug
-- **JWT Authentication**: Token-based authentication
-- **Rate Limiting**: Protection against brute force attacks
-- **Input Validation**: Comprehensive input sanitization
-- **File Encryption**: Secure file storage
-- **CSP Headers**: Content Security Policy protection
-- **XSS Protection**: Cross-site scripting prevention
+## 📄 License
 
-### API Endpoints
+This project is licensed under the MIT License.
 
-- `GET /` - Home page
-- `GET/POST /login` - User authentication
-- `GET/POST /register` - User registration
-- `GET /user_dashboard` - User dashboard
-- `GET /admin_dashboard` - Admin dashboard
-- `GET /admin/users` - User management
-- `GET /admin/events` - Event management
-- `POST /admin/add_event` - Create new event
-- `GET /join_event/<event_id>` - Join an event
-- `GET /scan_qr/<event_id>` - Scan QR code for check-in
+---
 
-### Troubleshooting
+**Ready to revolutionize political event management! 🎉**
 
-**Common Issues:**
 
-1. **Build fails**: Check that all dependencies are in `requirements.txt`
-2. **Runtime errors**: Check the logs in Render dashboard
-3. **Email not working**: Verify Gmail app password and environment variables
-4. **File upload issues**: Ensure `secure_uploads` directory exists
-
-**Logs:**
-- Check Render dashboard → Your service → Logs
-- Application logs are also stored in `app.log`
-
-### Support
-
-For issues or questions:
-1. Check the Render logs
-2. Verify environment variables
-3. Test locally first
-4. Check the application logs in `app.log`
-
-## License
 
 This project is open source and available under the MIT License.
+
+
+
+
+This project is open source and available under the MIT License.
+
 

@@ -2,8 +2,14 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
+import enum
 
 db = SQLAlchemy()
+
+class UserType(enum.Enum):
+    NORMAL = "normal"
+    ADMIN = "admin"
+    POLITICAL_PARTY = "political_party"
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -16,19 +22,19 @@ class User(db.Model):
     whatsapp_phone = db.Column(db.String(15))
     location = db.Column(db.String(200), nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
+    user_type = db.Column(db.Enum(UserType), default=UserType.NORMAL, nullable=False)
     status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
     
-    # KYC Fields
-    kyc_status = db.Column(db.String(20), default='pending')  # pending, verified, failed
-    kyc_verified_at = db.Column(db.DateTime)
-    kyc_data = db.Column(db.JSON)
+    # Verification Fields
+    verification_status = db.Column(db.String(20), default='pending')  # pending, verified, failed
     verification_score = db.Column(db.Float)
     
-    # Political Party Verification
+    # Political Party Specific Fields
     is_party_admin = db.Column(db.Boolean, default=False)
     party_name = db.Column(db.String(100))
     party_domain = db.Column(db.String(100))
     party_verification_status = db.Column(db.String(20), default='pending')
+    organization_email = db.Column(db.String(120))  # For political party verification
     
     # WhatsApp Verification
     whatsapp_verified = db.Column(db.Boolean, default=False)
@@ -47,8 +53,6 @@ class User(db.Model):
     
     # Relationships
     registrations = db.relationship('Registration', backref='user', lazy=True)
-    payments = db.relationship('Payment', backref='user', lazy=True)
-    payouts = db.relationship('Payout', backref='user', lazy=True)
     support_tickets = db.relationship('SupportTicket', backref='user', lazy=True)
     volunteer_skills = db.relationship('VolunteerSkill', backref='user', lazy=True)
     auto_matches = db.relationship('AutoMatch', backref='volunteer', lazy=True)
@@ -70,13 +74,26 @@ class User(db.Model):
             'phone': self.phone,
             'whatsapp_phone': self.whatsapp_phone,
             'location': self.location,
+            'user_type': self.user_type.value if self.user_type else None,
             'status': self.status,
-            'kyc_status': self.kyc_status,
+            'verification_status': self.verification_status,
             'is_party_admin': self.is_party_admin,
             'party_name': self.party_name,
             'whatsapp_verified': self.whatsapp_verified,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+    
+    @property
+    def is_approved(self):
+        return self.status == 'approved'
+    
+    @property
+    def is_political_party(self):
+        return self.user_type == UserType.POLITICAL_PARTY
+    
+    @property
+    def is_admin(self):
+        return self.user_type == UserType.ADMIN
 
 class Event(db.Model):
     __tablename__ = 'events'
@@ -291,5 +308,5 @@ class ActivityLog(db.Model):
     description = db.Column(db.Text)
     ip_address = db.Column(db.String(50))
     user_agent = db.Column(db.Text)
-    metadata = db.Column(db.JSON)
+    event_metadata = db.Column(db.JSON)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

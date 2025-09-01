@@ -7,6 +7,7 @@ import uuid
 import jwt
 import logging
 import pickle
+import time
 from datetime import datetime, timedelta
 from functools import wraps
 import qrcode
@@ -16,6 +17,7 @@ from marshmallow import Schema, fields, validate, validates_schema, ValidationEr
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from simple_auth0 import simple_auth0
 
 # Load environment variables
 load_dotenv()
@@ -113,6 +115,8 @@ class TestingConfig(Config):
 
 app.config.from_object(Config)
 
+# Auth0 is handled by simple_auth0 module
+
 # Initialize database
 db.init_app(app)
 migrate.init_app(app, db)
@@ -125,13 +129,29 @@ from models import *
 # limiter = Limiter(...)  # Disabled for deployment
 
 # Ensure upload directory exists
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+def ensure_upload_directory():
+    """Ensure upload directory exists and is writable"""
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        # Test if directory is writable
+        test_file = os.path.join(app.config['UPLOAD_FOLDER'], 'test.txt')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+        return True
+    except Exception as e:
+        print(f"ERROR: Cannot create or write to upload directory: {e}")
+        return False
+
+# Initialize upload directory
+if not ensure_upload_directory():
+    print("WARNING: Upload directory is not accessible. File uploads will fail.")
 
 # Initialize encryption
 cipher = Fernet(app.config['ENCRYPTION_KEY'])
 
-# Data files for persistence
-DATA_DIR = 'data'
+# Data files for persistence (configurable via env for Render disk)
+DATA_DIR = os.environ.get('DATA_DIR', 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 
 USERS_FILE = os.path.join(DATA_DIR, 'users.pkl')
@@ -214,6 +234,64 @@ def save_activities(activities_db):
 def save_sessions(sessions_db):
     with open(SESSIONS_FILE, 'wb') as f:
         pickle.dump(sessions_db, f)
+
+def check_duplicates(email=None, phone=None, name=None, party_name=None):
+    """
+    Comprehensive duplicate checking across all user types
+    Returns a list of error messages for any duplicates found
+    """
+    errors = []
+    
+    # Check in users_db
+    for user in users_db.values():
+        # Email check
+        if email and user['email'].lower() == email.lower():
+            errors.append('Email address is already registered')
+        
+        # Phone check
+        if phone and user['phone'] == phone:
+            errors.append('Phone number is already registered')
+        
+        # Name check (case-insensitive)
+        if name and user['name'].lower() == name.lower():
+            errors.append('A user with this name is already registered')
+        
+        # Party name check (case-insensitive, only for political parties)
+        if party_name and user.get('party_name') and user['party_name'].lower() == party_name.lower():
+            errors.append('A political party with this name is already registered')
+    
+    # Check in admin credentials
+    if email and email in admin_credentials:
+        errors.append('This email is reserved for admin use')
+    
+    return errors
+
+def validate_file_upload(file, allowed_extensions, max_size_mb=10):
+    """
+    Validate file upload
+    Returns (is_valid, error_message)
+    """
+    if not file or not file.filename:
+        return False, "No file selected"
+    
+    # Check file extension
+    if '.' not in file.filename:
+        return False, "Invalid file format"
+    
+    file_extension = file.filename.rsplit('.', 1)[1].lower()
+    if file_extension not in allowed_extensions:
+        return False, f"Only {', '.join(allowed_extensions)} files are allowed"
+    
+    # Check file size
+    file.seek(0, 2)  # Seek to end
+    file_size = file.tell()
+    file.seek(0)  # Reset to beginning
+    
+    max_size_bytes = max_size_mb * 1024 * 1024
+    if file_size > max_size_bytes:
+        return False, f"File size must be less than {max_size_mb}MB"
+    
+    return True, None
 
 # Load initial data
 users_db, events_db, registrations_db, admin_credentials, activities_db, sessions_db = load_data()
@@ -330,6 +408,55 @@ def add_security_headers(response):
 def index():
     return render_template('index.html')
 
+@app.route('/test_simple')
+def test_simple():
+    return "Simple test route working!"
+
+@app.route('/political_party_login_direct', methods=['GET', 'POST'])
+def political_party_login_direct():
+    """Direct political party login for testing"""
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        # Check if it's a valid political party user
+        if email in users_db:
+            user = users_db[email]
+            if (user.get('user_type') == 'political_party' and 
+                user.get('status') == 'approved' and 
+                check_password_hash(user['password'], password)):
+                
+                session['user_id'] = email
+                session['role'] = 'user'
+                session['user_type'] = 'political_party'
+                flash(f'Welcome {user["name"]}!')
+                return redirect('/political_party_dashboard')
+        
+        flash('Invalid political party credentials')
+        return render_template('login.html')
+    
+    return render_template('login.html')
+
+@app.route('/debug_db')
+def debug_db():
+    """Debug endpoint to check database state"""
+    debug_info = {
+        'users_count': len(users_db),
+        'admin_count': len(admin_credentials),
+        'users': {},
+        'admin_emails': list(admin_credentials.keys())
+    }
+    
+    for email, user in users_db.items():
+        debug_info['users'][email] = {
+            'name': user.get('name', 'N/A'),
+            'user_type': user.get('user_type', 'N/A'),
+            'status': user.get('status', 'N/A'),
+            'password_hash': user.get('password', 'N/A')[:50] + '...' if user.get('password') else 'N/A'
+        }
+    
+    return jsonify(debug_info)
+
 @app.route('/test_session')
 def test_session():
     """Test route to check session status"""
@@ -350,101 +477,286 @@ def test_admin():
     }
     return jsonify(admin_info)
 
-@app.route('/login', methods=['GET', 'POST'])
-# @limiter.limit("5 per minute")  # Disabled for deployment
-def login():
+@app.route('/user_login', methods=['GET', 'POST'])
+def user_login():
+    """Login route specifically for normal users/volunteers"""
     if request.method == 'POST':
         try:
-            print("DEBUG: Login POST request received")
             data = sanitize_input(request.form.to_dict())
             email = data.get('email')
             password = data.get('password')
             
-            print(f"DEBUG: Login attempt for email: {email}")
-            print(f"DEBUG: Admin credentials keys: {list(admin_credentials.keys())}")
-            print(f"DEBUG: Email in admin_credentials: {email in admin_credentials}")
+            # Check if user exists and is a normal user
+            if email in users_db:
+                user = users_db[email]
+                if user.get('user_type') == 'normal' and check_password_hash(user['password'], password):
+                    if user['status'] == 'approved':
+                        session['user_id'] = email
+                        session['role'] = 'user'
+                        session['user_type'] = 'normal'
+                        log_activity('user_login', f'User {email} logged in')
+                        flash(f'Welcome {user["name"]}!')
+                        return redirect(url_for('user_dashboard'))
+                    else:
+                        # User exists but not approved - show approval waiting page
+                        return render_template('approval_waiting.html', user_type='normal')
+            
+            flash('Invalid credentials or account not approved')
+        except Exception as e:
+            print(f"DEBUG: User login error: {e}")
+            flash('An error occurred during login')
+    
+    return render_template('user_login.html')
+
+@app.route('/political_party_login', methods=['GET', 'POST'])
+def political_party_login():
+    """Login route specifically for political parties"""
+    if request.method == 'POST':
+        try:
+            data = sanitize_input(request.form.to_dict())
+            email = data.get('email')
+            password = data.get('password')
+            
+            # Check if user exists and is a political party
+            if email in users_db:
+                user = users_db[email]
+                if user.get('user_type') == 'political_party' and check_password_hash(user['password'], password):
+                    if user['status'] == 'approved':
+                        session['user_id'] = email
+                        session['role'] = 'user'
+                        session['user_type'] = 'political_party'
+                        log_activity('political_party_login', f'Political party {email} logged in')
+                        flash(f'Welcome {user["name"]}!')
+                        return redirect(url_for('political_party_dashboard'))
+                    else:
+                        # User exists but not approved - show approval waiting page
+                        return render_template('approval_waiting.html', user_type='political_party')
+            
+            flash('Invalid credentials or account not approved')
+        except Exception as e:
+            print(f"DEBUG: Political party login error: {e}")
+            flash('An error occurred during login')
+    
+    return render_template('political_party_login.html')
+
+@app.route('/admin_login', methods=['GET', 'POST'])
+def admin_login():
+	"""Login route specifically for admin users"""
+	if request.method == 'POST':
+		try:
+			data = sanitize_input(request.form.to_dict())
+			email = data.get('email')
+			password = data.get('password')
+			# Check admin users
+			if email in admin_credentials:
+				password_check = check_password_hash(admin_credentials[email]['password'], password)
+				if password_check:
+					session['user_id'] = email
+					session['role'] = 'admin'
+					log_activity('admin_login', f'Admin {email} logged in')
+					flash('Welcome Admin!')
+					return redirect(url_for('admin_dashboard'))
+			flash('Invalid admin credentials')
+		except Exception as e:
+			print(f"DEBUG: Admin login error: {e}")
+			flash('An error occurred during login')
+	return render_template('admin_login.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Clean login route for all user types"""
+    if request.method == 'POST':
+        try:
+            email = request.form.get('email', '').strip()
+            password = request.form.get('password', '').strip()
+            
+            if not email or not password:
+                flash('Email and password are required')
+                return render_template('login.html')
             
             # Check admin users
             if email in admin_credentials:
-                print(f"DEBUG: Found admin email, checking password...")
-                password_check = check_password_hash(admin_credentials[email]['password'], password)
-                print(f"DEBUG: Password check result: {password_check}")
-                
-                if password_check:
+                if check_password_hash(admin_credentials[email]['password'], password):
                     session['user_id'] = email
                     session['role'] = 'admin'
-                    print(f"DEBUG: Admin login successful, session set: {dict(session)}")
-                    log_activity('admin_login', f'Admin {email} logged in')
                     flash('Welcome Admin!')
-                    print("DEBUG: Redirecting to admin_dashboard")
-                    return redirect(url_for('admin_dashboard'))
-                else:
-                    print(f"DEBUG: Admin password check failed")
+                    return redirect('/admin/dashboard')
             
-            # Check regular users
-            if email in users_db and users_db[email]['status'] == 'approved':
-                if check_password_hash(users_db[email]['password'], password):
-                    session['user_id'] = email
-                    session['role'] = 'user'
-                    log_activity('user_login', f'User {email} logged in')
-                    flash(f'Welcome {users_db[email]["name"]}!')
-                    return redirect(url_for('user_dashboard'))
+            # Check regular users and political parties
+            if email in users_db:
+                user = users_db[email]
+                if check_password_hash(user['password'], password):
+                    if user['status'] == 'approved':
+                        session['user_id'] = email
+                        session['role'] = 'user'
+                        session['user_type'] = user.get('user_type', 'normal')
+                        flash(f'Welcome {user["name"]}!')
+                        
+                        # Redirect based on user type
+                        if user.get('user_type') == 'political_party':
+                            return redirect('/political_party_dashboard')
+                        else:
+                            return redirect('/user_dashboard')
+                    else:
+                        return render_template('approval_waiting.html', user_type=user.get('user_type', 'normal'))
             
-            log_activity('login_failed', f'Failed login attempt for {email}')
             flash('Invalid credentials or account not approved')
         except Exception as e:
-            print(f"DEBUG: Login error: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"Login error: {e}")
             flash('An error occurred during login')
     
     return render_template('login.html')
+
+# Auth0 Routes for Normal Users
+@app.route('/auth0/login')
+def auth0_login():
+    """Redirect to Auth0 login"""
+    login_url = simple_auth0.get_login_url()
+    return redirect(login_url)
+
+@app.route('/callback')
+def auth0_callback():
+    """Handle Auth0 callback"""
+    try:
+        code = request.args.get('code')
+        if not code:
+            flash('Authentication failed: No authorization code received')
+            return redirect(url_for('index'))
+        
+        # Exchange code for token
+        token_data = simple_auth0.exchange_code_for_token(code)
+        if not token_data:
+            flash('Authentication failed: Could not exchange code for token')
+            return redirect(url_for('index'))
+        
+        # Get user info
+        user_info = simple_auth0.get_user_info(token_data['access_token'])
+        if not user_info:
+            flash('Authentication failed: Could not get user info')
+            return redirect(url_for('index'))
+        
+        # Store user info in session
+        session['auth0_user'] = user_info
+        session['profile'] = {
+            'user_id': user_info['sub'],
+            'name': user_info.get('name', ''),
+            'email': user_info.get('email', ''),
+            'picture': user_info.get('picture', ''),
+            'email_verified': user_info.get('email_verified', False)
+        }
+        
+        # Sync user to database
+        sync_auth0_user_to_database(user_info)
+        
+        flash(f'Welcome {user_info.get("name", "User")}!')
+        return redirect(url_for('user_dashboard'))
+        
+    except Exception as e:
+        print(f"Auth0 callback error: {e}")
+        flash('Authentication failed. Please try again.')
+        return redirect(url_for('index'))
+
+@app.route('/auth0/logout')
+def auth0_logout():
+    """Logout from Auth0"""
+    session.clear()
+    logout_url = simple_auth0.get_logout_url()
+    return redirect(logout_url)
+
+def sync_auth0_user_to_database(user_info):
+    """Sync Auth0 user to our database"""
+    global users_db
+    
+    email = user_info.get('email')
+    if not email:
+        return
+    
+    try:
+        # Check if user already exists
+        if email not in users_db:
+            # Create new user in our database
+            user_id = user_info['sub']  # Use Auth0 user ID
+            users_db[email] = {
+                'id': user_id,
+                'name': user_info.get('name', ''),
+                'email': email,
+                'phone': '',  # Auth0 doesn't provide phone by default
+                'location': '',
+                'password': '',  # No password needed for Auth0 users
+                'user_type': 'normal',
+                'status': 'approved',  # Auth0 users are pre-verified
+                'auth0_user_id': user_id,
+                'auth0_picture': user_info.get('picture', ''),
+                'email_verified': user_info.get('email_verified', False),
+                'created_at': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            save_users(users_db)
+            print(f"Created new user from Auth0: {email}")
+        else:
+            # Update existing user with Auth0 info
+            users_db[email].update({
+                'auth0_user_id': user_info['sub'],
+                'auth0_picture': user_info.get('picture', ''),
+                'email_verified': user_info.get('email_verified', False),
+                'updated_at': datetime.utcnow().isoformat()
+            })
+            save_users(users_db)
+            print(f"Updated existing user from Auth0: {email}")
+    except Exception as e:
+        print(f"Error syncing Auth0 user to database: {e}")
+        # Don't fail the authentication if database sync fails
 
 @app.route('/register', methods=['GET', 'POST'])
 # @limiter.limit("3 per minute")  # Disabled for deployment
 def register():
     if request.method == 'POST':
-        schema = UserRegistrationSchema()
         try:
+            schema = UserRegistrationSchema()
             data = schema.load(sanitize_input(request.form.to_dict()))
         except ValidationError as err:
+            error_messages = []
             for field, errors in err.messages.items():
                 for error in errors:
-                    flash(f"{field}: {error}")
-            return render_template('register.html')
+                    error_messages.append(f"{field}: {error}")
+            return render_template('register.html', error='; '.join(error_messages))
         
-        # Check if user already exists
-        if data['email'] in users_db:
-            flash('Email already registered')
-            return render_template('register.html')
+        # Enhanced duplicate checking using helper function
+        duplicate_errors = check_duplicates(
+            email=data['email'],
+            phone=data['phone'],
+            name=data['name']
+        )
         
-        # Check phone number
-        for user in users_db.values():
-            if user['phone'] == data['phone']:
-                flash('Phone number already registered')
-                return render_template('register.html')
+        if duplicate_errors:
+            return render_template('register.html', error='; '.join(duplicate_errors))
         
-        # Create new user
-        user_id = str(uuid.uuid4())
-        users_db[data['email']] = {
-            'id': user_id,
-            'name': data['name'],
-            'email': data['email'],
-            'phone': data['phone'],
-            'location': data['location'],
-            'password': generate_password_hash(data['password'], method='sha256'),
-            'status': 'pending',
-            'adhar_front': None,
-            'adhar_back': None,
-            'selfie': None,
-            'created_at': datetime.utcnow().isoformat(),
-            'updated_at': datetime.utcnow().isoformat()
-        }
-        
-        save_users(users_db)
-        log_activity('user_registration', f'New user registered: {data["email"]}')
-        flash('Registration successful! Please upload your documents for verification.')
-        return redirect(url_for('upload_documents', user_id=user_id))
+        try:
+            # Create new user
+            user_id = str(uuid.uuid4())
+            users_db[data['email']] = {
+                'id': user_id,
+                'name': data['name'],
+                'email': data['email'],
+                'phone': data['phone'],
+                'location': data['location'],
+                'password': generate_password_hash(data['password'], method='sha256'),
+                'user_type': 'normal',
+                'status': 'approved',  # Auto-approve normal users
+                'created_at': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            
+            save_users(users_db)
+            log_activity('user_registration', f'New user registered: {data["email"]}')
+            flash('Registration successful! You can now login.')
+            return redirect(url_for('login'))
+            
+        except Exception as e:
+            print(f"DEBUG: User registration error: {e}")
+            import traceback
+            traceback.print_exc()
+            return render_template('register.html', error='An error occurred during registration. Please try again.')
     
     return render_template('register.html')
 
@@ -484,35 +796,44 @@ def upload_documents(user_id):
     return render_template('upload_documents.html', user=user)
 
 @app.route('/user_dashboard')
-@require_auth
 def user_dashboard():
-    try:
-        if session['role'] != 'user':
-            return redirect(url_for('login'))
-        
-        user = users_db.get(session['user_id'])
-        if not user:
-            flash('User not found')
-            return redirect(url_for('login'))
-        
-        events = list(events_db.values())
-        
-        # Convert datetime strings for templates
-        convert_datetime_strings(events)
-        
-        user_registrations = [r for r in registrations_db.values() if r['user_email'] == session['user_id']]
-        
-        # Convert datetime strings for registrations as well
-        convert_datetime_strings(user_registrations)
-        
-        return render_template('user_dashboard.html', user=user, events=events, registrations=user_registrations)
-    except Exception as e:
-        print(f"User dashboard error: {e}")
-        import traceback
-        traceback.print_exc()
-        return f"Error in user dashboard: {str(e)}", 500
+	try:
+		# Check if user is authenticated via Auth0
+		if session.get('auth0_user'):
+			user_email = session['auth0_user'].get('email')
+			user = users_db.get(user_email)
+			
+			if not user:
+				flash('User not found in database')
+				return redirect(url_for('auth0_login'))
+		else:
+			# Fallback to session-based auth for admin users
+			if session.get('role') != 'user':
+				return redirect(url_for('login'))
+			
+			user = users_db.get(session['user_id'])
+			if not user:
+				flash('User not found')
+				return redirect(url_for('login'))
+		
+		events = list(events_db.values())
+		
+		# Convert datetime strings for templates
+		convert_datetime_strings(events)
+		
+		user_registrations = [r for r in registrations_db.values() if r['user_email'] == session['user_id']]
+		
+		# Convert datetime strings for registrations as well
+		convert_datetime_strings(user_registrations)
+		
+		return render_template('user_dashboard.html', user=user, events=events, registrations=user_registrations)
+	except Exception as e:
+		print(f"User dashboard error: {e}")
+		import traceback
+		traceback.print_exc()
+		return f"Error in user dashboard: {str(e)}", 500
 
-@app.route('/admin_dashboard')
+@app.route('/admin/dashboard')
 @require_admin
 def admin_dashboard():
     try:
@@ -520,6 +841,8 @@ def admin_dashboard():
         print(f"DEBUG: Session data: {dict(session)}")
         
         pending_users = [u for u in users_db.values() if u['status'] == 'pending']
+        pending_normal_users = [u for u in pending_users if u.get('user_type') == 'normal']
+        pending_political_parties = [u for u in pending_users if u.get('user_type') == 'political_party']
         print(f"DEBUG: Found {len(pending_users)} pending users")
         
         stats = {
@@ -547,6 +870,8 @@ def admin_dashboard():
         print("DEBUG: Rendering admin dashboard template")
         return render_template('admin_dashboard.html', 
                              pending_users=pending_users, 
+                             pending_normal_users=pending_normal_users,
+                             pending_political_parties=pending_political_parties,
                              stats=stats, 
                              recent_activities=recent_activities,
                              events=events)
@@ -780,7 +1105,7 @@ def activity_logs():
     
     return render_template('activity_logs.html', activities=activities_paginated, action_filter=action_filter)
 
-@app.route('/join_event/<event_id>')
+@app.route('/join_event/<event_id>', methods=['GET', 'POST'])
 @require_auth
 def join_event(event_id):
     if session['role'] != 'user':
@@ -819,6 +1144,62 @@ def join_event(event_id):
     log_activity('event_joined', f'Joined event: {event["title"]}')
     flash(f'Successfully joined "{event["title"]}"!')
     return redirect(url_for('user_dashboard'))
+
+@app.route('/join_event_with_location/<event_id>', methods=['GET', 'POST'])
+@require_auth
+def join_event_with_location(event_id):
+    """Join an event with location access"""
+    if session.get('role') != 'user':
+        return redirect(url_for('login'))
+    
+    event = events_db.get(event_id)
+    if not event:
+        flash('Event not found')
+        return redirect(url_for('user_dashboard'))
+    
+    user_email = session['user_id']
+    
+    # Check if already registered
+    for registration in registrations_db.values():
+        if registration.get('event_id') == event_id and registration.get('user_email') == user_email:
+            flash('You are already registered for this event')
+            return redirect(url_for('user_dashboard'))
+    
+    if request.method == 'POST':
+        try:
+            # Get user's current location from form
+            latitude = request.form.get('latitude')
+            longitude = request.form.get('longitude')
+            user_location = request.form.get('user_location', '')
+            
+            if not latitude or not longitude:
+                return render_template('join_event_location.html', event=event, error='Location access is required to register for this event')
+            
+            # Create registration with location
+            registration_id = str(uuid.uuid4())
+            registrations_db[registration_id] = {
+                'id': registration_id,
+                'event_id': event_id,
+                'user_email': user_email,
+                'status': 'registered',
+                'latitude': float(latitude),
+                'longitude': float(longitude),
+                'user_location': user_location,
+                'created_at': datetime.utcnow().isoformat(),
+                'check_in_time': None
+            }
+            
+            save_registrations(registrations_db)
+            log_activity('event_registration_with_location', f'User {user_email} registered for event {event_id} with location')
+            
+            flash('Successfully registered for the event with location!')
+            return redirect(url_for('user_dashboard'))
+            
+        except Exception as e:
+            print(f"DEBUG: Join event with location error: {e}")
+            return render_template('join_event_location.html', event=event, error='An error occurred during registration')
+    
+    return render_template('join_event_location.html', event=event)
 
 @app.route('/scan_qr/<event_id>')
 @require_auth
@@ -868,46 +1249,552 @@ def event_stats(event_id):
 
 @app.route('/logout')
 def logout():
-    user_id = session.get('user_id')
-    if user_id:
-        log_activity('logout', f'User {user_id} logged out')
-    session.clear()
-    flash('You have been logged out successfully')
-    return redirect(url_for('index'))
+	# Check if user is authenticated via Auth0
+	if session.get('auth0_user'):
+		user_email = session['auth0_user'].get('email')
+		if user_email:
+			log_activity('logout', f'Auth0 user {user_email} logged out')
+		session.clear()
+		logout_url = simple_auth0.get_logout_url()
+		return redirect(logout_url)
+	else:
+		# Fallback to session-based logout
+		user_id = session.get('user_id')
+		if user_id:
+			log_activity('logout', f'User {user_id} logged out')
+		session.clear()
+		flash('Logged out successfully')
+		return redirect(url_for('index'))
+
+# ============================================================================
+# POLITICAL PARTY ROUTES
+# ============================================================================
+
+@app.route('/register_political_party', methods=['GET', 'POST'])
+def register_political_party():
+    """Political party registration"""
+    if request.method == 'POST':
+        try:
+            # Get form data
+            party_name = request.form.get('party_name', '').strip()
+            name = request.form.get('name', '').strip()
+            organization_email = request.form.get('organization_email', '').strip()
+            phone = request.form.get('phone', '').strip()
+            whatsapp_phone = request.form.get('whatsapp_phone', '').strip()
+            location = request.form.get('location', '').strip()
+            party_domain = request.form.get('party_domain', '').strip()
+            description = request.form.get('description', '').strip()
+            password = request.form.get('password', '')
+            confirm_password = request.form.get('confirm_password', '')
+            
+            # Basic validation
+            errors = []
+            
+            # Required field validation
+            if not party_name:
+                errors.append('Political party name is required')
+            if not name:
+                errors.append('Contact person name is required')
+            if not organization_email:
+                errors.append('Organization email is required')
+            if not phone:
+                errors.append('Phone number is required')
+            if not location:
+                errors.append('Party headquarters location is required')
+            if not password:
+                errors.append('Password is required')
+            
+            # Email format validation
+            if organization_email and '@' not in organization_email:
+                errors.append('Please enter a valid email address')
+            
+            # Phone number validation (10 digits)
+            if phone and not phone.isdigit() or len(phone) != 10:
+                errors.append('Phone number must be 10 digits')
+            
+            # WhatsApp phone validation (if provided)
+            if whatsapp_phone and (not whatsapp_phone.isdigit() or len(whatsapp_phone) != 10):
+                errors.append('WhatsApp number must be 10 digits')
+            
+            # Password validation
+            if password and len(password) < 8:
+                errors.append('Password must be at least 8 characters long')
+            
+            # Password confirmation
+            if password != confirm_password:
+                errors.append('Passwords do not match')
+            
+            # Validate organization email (no personal emails)
+            personal_domains = ['@gmail.com', '@yahoo.com', '@hotmail.com', '@outlook.com', '@yahoo.in', '@rediffmail.com']
+            if organization_email and any(domain in organization_email.lower() for domain in personal_domains):
+                errors.append('Personal email addresses are not allowed. Please use your organization email.')
+            
+            # Enhanced duplicate checking using helper function
+            duplicate_errors = check_duplicates(
+                email=organization_email,
+                phone=phone,
+                name=name,
+                party_name=party_name
+            )
+            errors.extend(duplicate_errors)
+            
+            # File upload validation
+            adhar_front = None
+            adhar_back = None
+            selfie = None
+            
+            # Check if files were uploaded
+            if 'adhar_front' not in request.files or not request.files['adhar_front'].filename:
+                errors.append('Aadhaar card (front side) is required')
+            if 'adhar_back' not in request.files or not request.files['adhar_back'].filename:
+                errors.append('Aadhaar card (back side) is required')
+            if 'selfie' not in request.files or not request.files['selfie'].filename:
+                errors.append('Selfie photo is required')
+            
+            if errors:
+                return render_template('register_political_party.html', error='; '.join(errors))
+            
+            # Process file uploads
+            try:
+                # Process Aadhaar front
+                if 'adhar_front' in request.files:
+                    file = request.files['adhar_front']
+                    is_valid, error_msg = validate_file_upload(file, {'png', 'jpg', 'jpeg', 'pdf'})
+                    if not is_valid:
+                        errors.append(f'Aadhaar front: {error_msg}')
+                    else:
+                        filename = secure_filename(f"adhar_front_{organization_email}_{int(time.time())}.{file.filename.rsplit('.', 1)[1].lower()}")
+                        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(filepath)
+                        adhar_front = filename
+                
+                # Process Aadhaar back
+                if 'adhar_back' in request.files:
+                    file = request.files['adhar_back']
+                    is_valid, error_msg = validate_file_upload(file, {'png', 'jpg', 'jpeg', 'pdf'})
+                    if not is_valid:
+                        errors.append(f'Aadhaar back: {error_msg}')
+                    else:
+                        filename = secure_filename(f"adhar_back_{organization_email}_{int(time.time())}.{file.filename.rsplit('.', 1)[1].lower()}")
+                        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(filepath)
+                        adhar_back = filename
+                
+                # Process selfie
+                if 'selfie' in request.files:
+                    file = request.files['selfie']
+                    is_valid, error_msg = validate_file_upload(file, {'png', 'jpg', 'jpeg'})
+                    if not is_valid:
+                        errors.append(f'Selfie: {error_msg}')
+                    else:
+                        filename = secure_filename(f"selfie_{organization_email}_{int(time.time())}.{file.filename.rsplit('.', 1)[1].lower()}")
+                        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(filepath)
+                        selfie = filename
+                            
+            except Exception as e:
+                print(f"DEBUG: File upload error: {e}")
+                import traceback
+                traceback.print_exc()
+                errors.append('Error uploading files. Please try again.')
+            
+            if errors:
+                return render_template('register_political_party.html', error='; '.join(errors))
+            
+            # Validate that all required documents are uploaded
+            if not adhar_front or not adhar_back or not selfie:
+                return render_template('register_political_party.html', 
+                                     error='All documents (Aadhaar front, Aadhaar back, and selfie) are required for registration.')
+            
+            # Create new political party user
+            user_id = str(uuid.uuid4())
+            users_db[organization_email] = {
+                'id': user_id,
+                'name': name,
+                'email': organization_email,
+                'phone': phone,
+                'whatsapp_phone': whatsapp_phone,
+                'location': location,
+                'password': generate_password_hash(password, method='sha256'),
+                'user_type': 'political_party',
+                'status': 'pending',
+                'party_name': party_name,
+                'organization_email': organization_email,
+                'party_domain': party_domain,
+                'description': description,
+                'adhar_front': adhar_front,
+                'adhar_back': adhar_back,
+                'selfie': selfie,
+                'is_party_admin': True,
+                'created_at': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            
+            save_users(users_db)
+            log_activity('political_party_registration', f'New political party registered: {party_name} ({organization_email})')
+            
+            return render_template('approval_waiting.html', user_type='political_party')
+            
+        except Exception as e:
+            print(f"DEBUG: Political party registration error: {e}")
+            import traceback
+            traceback.print_exc()
+            return render_template('register_political_party.html', error='An error occurred during registration. Please try again.')
+    
+    return render_template('register_political_party.html')
+
+@app.route('/check_approval_status')
+def check_approval_status():
+    """Check if user has been approved"""
+    if 'user_id' in session:
+        user = users_db.get(session['user_id'])
+        
+        if user and user['status'] == 'approved':
+            if user.get('user_type') == 'political_party':
+                return jsonify({'approved': True, 'redirect_url': url_for('political_party_dashboard')})
+            else:
+                return jsonify({'approved': True, 'redirect_url': url_for('user_dashboard')})
+    
+    return jsonify({'approved': False})
+
+@app.route('/political_party_dashboard')
+@require_auth
+def political_party_dashboard():
+    """Political party dashboard"""
+    try:
+        if session.get('role') != 'user':
+            return redirect(url_for('login'))
+        
+        user = users_db.get(session['user_id'])
+        
+        if not user or user.get('user_type') != 'political_party':
+            return redirect(url_for('login'))
+        
+        if user['status'] != 'approved':
+            return render_template('approval_waiting.html', user_type='political_party')
+        
+        # Get user's events
+        user_events = [event for event in events_db.values() if event.get('created_by') == session['user_id']]
+        
+        # Get statistics
+        stats = {
+            'total_events': len(user_events),
+            'active_events': len([e for e in user_events if e.get('status') == 'upcoming']),
+            'total_volunteers': len([u for u in users_db.values() if u.get('user_type') == 'normal' and u.get('status') == 'approved']),
+            'pending_approvals': len([u for u in users_db.values() if u.get('status') == 'pending'])
+        }
+        
+        # Get recent events (without datetime conversion for now)
+        recent_events = sorted(user_events, key=lambda x: x.get('created_at', ''), reverse=True)[:5]
+        
+        # Get support tickets (mock data for now)
+        support_tickets = []
+        
+        return render_template('political_party_dashboard.html', 
+                             user=user, 
+                             stats=stats, 
+                             recent_events=recent_events,
+                             support_tickets=support_tickets)
+    except Exception as e:
+        print(f"Political party dashboard error: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Error in political party dashboard: {str(e)}", 500
+
+@app.route('/view_volunteer_locations')
+@require_auth
+def view_volunteer_locations():
+    """View volunteer locations on map"""
+    if session.get('role') != 'user':
+        return redirect(url_for('login'))
+    
+    user = users_db.get(session['user_id'])
+    
+    if not user or user.get('user_type') != 'political_party':
+        return redirect(url_for('login'))
+    
+    # Get all approved volunteers with their location data from registrations
+    volunteers_with_locations = []
+    
+    # Get all registrations with location data
+    registrations_with_location = [r for r in registrations_db.values() 
+                                 if r.get('latitude') and r.get('longitude')]
+    
+    for registration in registrations_with_location:
+        volunteer_user = users_db.get(registration.get('user_email'))
+        if volunteer_user and volunteer_user.get('user_type') == 'normal' and volunteer_user.get('status') == 'approved':
+            volunteer_info = {
+                'name': volunteer_user['name'],
+                'email': volunteer_user['email'],
+                'phone': volunteer_user['phone'],
+                'location': volunteer_user['location'],
+                'latitude': registration.get('latitude'),
+                'longitude': registration.get('longitude'),
+                'user_location': registration.get('user_location', ''),
+                'registration_date': registration.get('created_at'),
+                'event_id': registration.get('event_id')
+            }
+            volunteers_with_locations.append(volunteer_info)
+    
+    # Get event details for each registration
+    for volunteer in volunteers_with_locations:
+        event = events_db.get(volunteer.get('event_id'))
+        if event:
+            volunteer['event_title'] = event.get('title', 'Unknown Event')
+            volunteer['event_location'] = event.get('location', 'Unknown Location')
+    
+    convert_datetime_strings(volunteers_with_locations)
+    
+    return render_template('volunteer_locations.html', volunteers=volunteers_with_locations)
+
+@app.route('/create_support_ticket', methods=['GET', 'POST'])
+@require_auth
+def create_support_ticket():
+    """Create support ticket"""
+    if request.method == 'POST':
+        subject = request.form.get('subject')
+        description = request.form.get('description')
+        priority = request.form.get('priority', 'low')
+        
+        # Create ticket (mock implementation)
+        ticket_id = f"TICKET-{len(activities_db) + 1:06d}"
+        
+        log_activity('support_ticket_created', f'Support ticket created: {ticket_id}')
+        
+        flash('Support ticket created successfully!')
+        return redirect(url_for('political_party_dashboard' if session.get('user_type') == 'political_party' else 'user_dashboard'))
+    
+    return render_template('create_support_ticket.html')
+
+@app.route('/political_party/add_event', methods=['GET', 'POST'])
+@require_auth
+def political_party_add_event():
+    """Add new event (for political parties)"""
+    if session.get('role') != 'user' or session.get('user_type') != 'political_party':
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        try:
+            title = request.form.get('title', '').strip()
+            description = request.form.get('description', '').strip()
+            location = request.form.get('location', '').strip()
+            date_str = request.form.get('date')
+            time_str = request.form.get('time')
+            
+            # Validation
+            errors = []
+            if not title:
+                errors.append('Event title is required')
+            if not description:
+                errors.append('Event description is required')
+            if not location:
+                errors.append('Event location is required')
+            if not date_str:
+                errors.append('Event date is required')
+            if not time_str:
+                errors.append('Event time is required')
+            
+            if errors:
+                return render_template('add_event.html', error='; '.join(errors))
+            
+            # Parse date and time
+            try:
+                event_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                event_time = datetime.strptime(time_str, '%H:%M').time()
+            except ValueError:
+                return render_template('add_event.html', error='Invalid date or time format')
+            
+            # Create event
+            event_id = str(uuid.uuid4())
+            events_db[event_id] = {
+                'id': event_id,
+                'title': title,
+                'description': description,
+                'location': location,
+                'date': event_date.isoformat(),  # Convert to string
+                'time': event_time.isoformat(),  # Convert to string
+                'created_by': session['user_id'],
+                'status': 'upcoming',
+                'created_at': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            
+            save_events(events_db)
+            log_activity('event_created', f'Event created: {title}')
+            
+            flash('Event created successfully!')
+            return redirect(url_for('political_party_dashboard'))
+            
+        except Exception as e:
+            print(f"DEBUG: Add event error: {e}")
+            import traceback
+            traceback.print_exc()
+            return render_template('add_event.html', error='An error occurred while creating the event')
+    
+    return render_template('add_event.html')
+
+@app.route('/view_event/<event_id>')
+@require_auth
+def view_event(event_id):
+    """View event details"""
+    if session.get('role') != 'user':
+        return redirect(url_for('login'))
+    
+    event = events_db.get(event_id)
+    if not event:
+        flash('Event not found')
+        return redirect(url_for('political_party_dashboard' if session.get('user_type') == 'political_party' else 'user_dashboard'))
+    
+    # Get registrations for this event
+    event_registrations = [r for r in registrations_db.values() if r.get('event_id') == event_id]
+    convert_datetime_strings(event_registrations)
+    
+    return render_template('view_event.html', event=event, registrations=event_registrations)
+
+@app.route('/edit_event/<event_id>', methods=['GET', 'POST'])
+@require_auth
+def edit_event(event_id):
+    """Edit event"""
+    if session.get('role') != 'user':
+        return redirect(url_for('login'))
+    
+    event = events_db.get(event_id)
+    if not event:
+        flash('Event not found')
+        return redirect(url_for('political_party_dashboard' if session.get('user_type') == 'political_party' else 'user_dashboard'))
+    
+    # Check if user owns this event
+    if event.get('created_by') != session['user_id']:
+        flash('You can only edit your own events')
+        return redirect(url_for('political_party_dashboard' if session.get('user_type') == 'political_party' else 'user_dashboard'))
+    
+    if request.method == 'POST':
+        try:
+            title = request.form.get('title', '').strip()
+            description = request.form.get('description', '').strip()
+            location = request.form.get('location', '').strip()
+            date_str = request.form.get('date')
+            time_str = request.form.get('time')
+            
+            # Validation
+            errors = []
+            if not title:
+                errors.append('Event title is required')
+            if not description:
+                errors.append('Event description is required')
+            if not location:
+                errors.append('Event location is required')
+            if not date_str:
+                errors.append('Event date is required')
+            if not time_str:
+                errors.append('Event time is required')
+            
+            if errors:
+                return render_template('edit_event.html', event=event, error='; '.join(errors))
+            
+            # Parse date and time
+            try:
+                event_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                event_time = datetime.strptime(time_str, '%H:%M').time()
+            except ValueError:
+                return render_template('edit_event.html', event=event, error='Invalid date or time format')
+            
+            # Update event
+            event.update({
+                'title': title,
+                'description': description,
+                'location': location,
+                'date': event_date,
+                'time': event_time,
+                'updated_at': datetime.utcnow().isoformat()
+            })
+            
+            save_events(events_db)
+            log_activity('event_updated', f'Event updated: {title}')
+            
+            flash('Event updated successfully!')
+            return redirect(url_for('political_party_dashboard'))
+            
+        except Exception as e:
+            print(f"DEBUG: Edit event error: {e}")
+            import traceback
+            traceback.print_exc()
+            return render_template('edit_event.html', event=event, error='An error occurred while updating the event')
+    
+    return render_template('edit_event.html', event=event)
+
+@app.route('/manage_volunteers/<event_id>')
+@require_auth
+def manage_volunteers(event_id):
+    """Manage volunteers for an event"""
+    if session.get('role') != 'user':
+        return redirect(url_for('login'))
+    
+    event = events_db.get(event_id)
+    if not event:
+        flash('Event not found')
+        return redirect(url_for('political_party_dashboard' if session.get('user_type') == 'political_party' else 'user_dashboard'))
+    
+    # Check if user owns this event
+    if event.get('created_by') != session['user_id']:
+        flash('You can only manage your own events')
+        return redirect(url_for('political_party_dashboard' if session.get('user_type') == 'political_party' else 'user_dashboard'))
+    
+    # Get registrations for this event
+    event_registrations = [r for r in registrations_db.values() if r.get('event_id') == event_id]
+    
+    # Get volunteer details
+    volunteers = []
+    for registration in event_registrations:
+        user = users_db.get(registration.get('user_email'))
+        if user:
+            volunteer_info = {
+                'name': user['name'],
+                'email': user['email'],
+                'phone': user['phone'],
+                'location': user['location'],
+                'registration_date': registration.get('created_at'),
+                'status': registration.get('status', 'registered')
+            }
+            volunteers.append(volunteer_info)
+    
+    convert_datetime_strings(volunteers)
+    
+    return render_template('manage_volunteers.html', event=event, volunteers=volunteers)
 
 # Helper functions
 def convert_datetime_strings(data):
-    """Convert datetime strings to datetime objects for templates"""
-    try:
-        if isinstance(data, list):
-            for item in data:
-                convert_datetime_strings(item)
-        elif isinstance(data, dict):
-            for key, value in data.items():
-                if key == 'time' and isinstance(value, str):
-                    try:
-                        # Handle time strings like '18:00:00' FIRST
-                        data[key] = datetime.strptime(value, '%H:%M:%S').time()
-                    except Exception as e:
-                        print(f"Error converting time: {value}, error: {e}")
-                        data[key] = datetime.utcnow().time()
-                elif key == 'date' and isinstance(value, str):
-                    try:
-                        # Handle date strings like '2024-12-31'
-                        data[key] = datetime.strptime(value, '%Y-%m-%d').date()
-                    except Exception as e:
-                        print(f"Error converting date: {value}, error: {e}")
-                        data[key] = datetime.utcnow().date()
-                elif key in ['created_at', 'updated_at', 'check_in_time'] and isinstance(value, str):
-                    try:
-                        data[key] = datetime.fromisoformat(value)
-                    except Exception as e:
-                        print(f"Error converting {key}: {value}, error: {e}")
-                        data[key] = datetime.utcnow()
-    except Exception as e:
-        print(f"DEBUG: Error in convert_datetime_strings: {e}")
-        import traceback
-        traceback.print_exc()
+	"""Convert datetime strings to datetime objects for templates"""
+	try:
+		if isinstance(data, list):
+			for item in data:
+				convert_datetime_strings(item)
+		elif isinstance(data, dict):
+			for key, value in data.items():
+				if key == 'time' and isinstance(value, str):
+					try:
+						# Handle time strings like '18:00:00' FIRST
+						data[key] = datetime.strptime(value, '%H:%M:%S').time()
+					except Exception as e:
+						print(f"Error converting time: {value}, error: {e}")
+						data[key] = datetime.utcnow().time()
+				elif key == 'date' and isinstance(value, str):
+					try:
+						# Handle date strings like '2024-12-31'
+						data[key] = datetime.strptime(value, '%Y-%m-%d').date()
+					except Exception as e:
+						print(f"Error converting date: {value}, error: {e}")
+						data[key] = datetime.utcnow().date()
+				elif key in ['created_at', 'updated_at', 'check_in_time'] and isinstance(value, str):
+					try:
+						data[key] = datetime.fromisoformat(value)
+					except Exception as e:
+						print(f"Error converting {key}: {value}, error: {e}")
+						data[key] = datetime.utcnow()
+	except Exception as e:
+		print(f"DEBUG: Error in convert_datetime_strings: {e}")
+		import traceback
+		traceback.print_exc()
 
 def safe_sort_by_created_at(items):
     """Safely sort items by created_at, handling mixed string/datetime types"""
@@ -1000,7 +1887,7 @@ def send_approval_email(email, name, status):
     pass
 
 # ============================================================================
-# NEW FEATURE API ROUTES
+# API ROUTES
 # ============================================================================
 
 # Import service classes
@@ -1010,24 +1897,24 @@ from services.crm_service import FreshdeskCRM
 from services.auto_matcher import AutoMatcher
 from services.maps_service import GoogleMapsService
 
-# Initialize services
-party_verification = PoliticalPartyVerification()
-whatsapp_service = WhatsAppService()
-whatsapp_group_service = WhatsAppGroupService()
-crm_service = FreshdeskCRM()
-auto_matcher = AutoMatcher()
-maps_service = GoogleMapsService()
+# Initialize services (will be done inside app context)
+party_verification = None
+whatsapp_service = None
+whatsapp_group_service = None
+crm_service = None
+auto_matcher = None
+maps_service = None
 
-# KYC Verification Routes (Disabled - KYC service removed)
-@app.route('/api/kyc/verify', methods=['POST'])
-def kyc_verify():
-    """KYC verification disabled - service removed"""
-    return jsonify({'success': False, 'error': 'KYC verification service has been removed from this version'}), 501
-
-@app.route('/api/kyc/status/<user_id>', methods=['GET'])
-def kyc_status(user_id):
-    """KYC status check disabled - service removed"""
-    return jsonify({'success': False, 'error': 'KYC verification service has been removed from this version'}), 501
+def initialize_services():
+    """Initialize service instances inside app context"""
+    global party_verification, whatsapp_service, whatsapp_group_service, crm_service, auto_matcher, maps_service
+    
+    party_verification = PoliticalPartyVerification()
+    whatsapp_service = WhatsAppService()
+    whatsapp_group_service = WhatsAppGroupService()
+    crm_service = FreshdeskCRM()
+    auto_matcher = AutoMatcher()
+    maps_service = GoogleMapsService()
 
 # WhatsApp Routes
 @app.route('/api/whatsapp/send-otp', methods=['POST'])
@@ -1084,25 +1971,9 @@ def create_whatsapp_group():
         logger.error(f"WhatsApp group creation error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Payment Routes (Disabled - Payment service removed)
-@app.route('/api/payments/create-order', methods=['POST'])
-def create_payment_order():
-    """Payment processing disabled - service removed"""
-    return jsonify({'success': False, 'error': 'Payment processing service has been removed from this version'}), 501
-
-@app.route('/api/payments/verify', methods=['POST'])
-def verify_payment():
-    """Payment verification disabled - service removed"""
-    return jsonify({'success': False, 'error': 'Payment processing service has been removed from this version'}), 501
-
-@app.route('/api/payments/payout', methods=['POST'])
-def create_payout():
-    """Payout processing disabled - service removed"""
-    return jsonify({'success': False, 'error': 'Payment processing service has been removed from this version'}), 501
-
 # CRM Support Routes
 @app.route('/api/support/ticket', methods=['POST'])
-def create_support_ticket():
+def api_create_support_ticket():
     """Create support ticket in Freshdesk"""
     try:
         data = request.get_json()
@@ -1222,16 +2093,21 @@ if __name__ == '__main__':
     print("✅ Database: SQLAlchemy with migration support")
     print("✅ Security: JWT, Input validation, File encryption")
     print("✅ Core Features: Activity logging, Admin history, Event management")
-    print("✅ NEW FEATURES IMPLEMENTED:")
+    print("✅ FEATURES IMPLEMENTED:")
     print("   🏛️  Political Party Email Verification")
     print("   📱 WhatsApp OTP & Group Management")
     print("   🎫 Freshdesk CRM Support")
     print("   🤖 Auto Matcher/Scheduler")
     print("   🗺️  Google Maps Integration")
     print("   📋 Terms & Conditions")
-    print("   ⚠️  KYC & Payment services removed")
     print("✅ Server starting at http://127.0.0.1:5000")
     print("=" * 80)
+    
+    # Initialize services inside app context
+    with app.app_context():
+        initialize_services()
+        # Auth0 is handled by simple_auth0 module
+        print("✅ Auth0 integration ready")
     
     # For production deployment
     port = int(os.environ.get('PORT', 5000))

@@ -13,12 +13,97 @@
             Streamline political events with secure user verification, QR code check-ins, and real-time attendance tracking.
         </p>
         <div class="hero-buttons">
-            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg" style="margin-right: 15px;">
-                <i class="fas fa-user-plus"></i> Get Started
+            <a href="{{ url_for('auth0_login') }}" class="btn btn-primary btn-lg" style="margin-right: 15px;">
+                <i class="fas fa-sign-in-alt"></i> Sign In as Volunteer
             </a>
-            <a href="{{ url_for('login') }}" class="btn btn-secondary btn-lg">
-                <i class="fas fa-sign-in-alt"></i> Login
+            <a href="{{ url_for('register_political_party') }}" class="btn btn-secondary btn-lg" style="margin-right: 15px;">
+                <i class="fas fa-landmark"></i> Register Political Party
             </a>
+        </div>
+    </div>
+</section>
+
+<!-- Login Section -->
+<section class="login-section" style="padding: 60px 0; background: rgba(255,255,255,0.1);">
+    <div class="container">
+        <h2 class="text-center mb-5" style="color: white; font-size: 2.5rem; font-weight: bold;">
+            Login to Your Account
+        </h2>
+        
+        <div class="login-grid">
+            <!-- Volunteer Login (includes Admin) -->
+            <div class="login-card">
+                <div class="login-header">
+                    <i class="fas fa-user" style="font-size: 2.5rem; color: #667eea;"></i>
+                    <h3 style="color: #333; margin: 15px 0;">Volunteer Login</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Sign in as volunteer or admin to access your account</p>
+                </div>
+                
+                <div class="auth0-login-section">
+                    <div class="text-center mb-4">
+                        <p style="color: #666; margin-bottom: 20px;">
+                            <i class="fas fa-shield-alt"></i> Secure login powered by Auth0
+                        </p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <a href="{{ url_for('auth0_login') }}" class="btn btn-primary w-100" style="padding: 15px; font-size: 1.1rem;">
+                            <i class="fas fa-sign-in-alt"></i> Sign In with Auth0
+                        </a>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <p style="color: #666; font-size: 0.9rem;">
+                            <i class="fas fa-info-circle"></i> New users will be automatically registered
+                        </p>
+                        <p style="color: #999; font-size: 0.8rem; margin-top: 5px;">
+                            <i class="fas fa-shield-alt"></i> Secure authentication with email verification
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Political Party Login -->
+            <div class="login-card">
+                <div class="login-header">
+                    <i class="fas fa-landmark" style="font-size: 2.5rem; color: #764ba2;"></i>
+                    <h3 style="color: #333; margin: 15px 0;">Political Party Login</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Sign in to manage events and coordinate volunteers</p>
+                </div>
+                
+                <form method="POST" action="{{ url_for('political_party_login') }}" class="login-form">
+                    <div class="form-group">
+                        <label for="party_email" class="form-label">
+                            <i class="fas fa-envelope"></i> Organization Email
+                        </label>
+                        <input type="email" id="party_email" name="email" class="form-control" required 
+                               placeholder="Enter your organization email">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="party_password" class="form-label">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <input type="password" id="party_password" name="password" class="form-control" required 
+                               placeholder="Enter your password">
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-secondary w-100">
+                            <i class="fas fa-sign-in-alt"></i> Sign In as Political Party
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p style="color: #666; font-size: 0.9rem;">
+                        New political party? 
+                        <a href="{{ url_for('register_political_party') }}" style="color: #764ba2; text-decoration: none; font-weight: 600;">
+                            Register here
+                        </a>
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -111,7 +196,7 @@
             <!-- For Users -->
             <div class="card">
                 <h3 class="text-center mb-4" style="color: #667eea;">
-                    <i class="fas fa-user"></i> For Users
+                    <i class="fas fa-user"></i> For Volunteers
                 </h3>
                 <div class="steps">
                     <div class="step mb-3">
@@ -145,38 +230,38 @@
                 </div>
             </div>
 
-            <!-- For Admins -->
+            <!-- For Political Parties -->
             <div class="card">
-                <h3 class="text-center mb-4" style="color: #667eea;">
-                    <i class="fas fa-user-shield"></i> For Admins
+                <h3 class="text-center mb-4" style="color: #764ba2;">
+                    <i class="fas fa-landmark"></i> For Political Parties
                 </h3>
                 <div class="steps">
                     <div class="step mb-3">
                         <div class="step-number">1</div>
                         <div class="step-content">
-                            <h4>Review User Applications</h4>
-                            <p>Review submitted documents and approve or reject user registrations.</p>
+                            <h4>Register with Organization Email</h4>
+                            <p>Create account using your political party's official email domain.</p>
                         </div>
                     </div>
                     <div class="step mb-3">
                         <div class="step-number">2</div>
                         <div class="step-content">
-                            <h4>Create Events</h4>
-                            <p>Add new political events with details, images, and party information.</p>
+                            <h4>Wait for Admin Approval</h4>
+                            <p>Admin verifies your organization email and approves your account.</p>
                         </div>
                     </div>
                     <div class="step mb-3">
                         <div class="step-number">3</div>
                         <div class="step-content">
-                            <h4>Generate QR Codes</h4>
-                            <p>Each event gets a unique QR code for secure check-in process.</p>
+                            <h4>Create & Manage Events</h4>
+                            <p>Create political events, manage registrations, and coordinate volunteers.</p>
                         </div>
                     </div>
                     <div class="step mb-3">
                         <div class="step-number">4</div>
                         <div class="step-content">
-                            <h4>Monitor Attendance</h4>
-                            <p>Track real-time attendance and event statistics during live events.</p>
+                            <h4>Monitor & Coordinate</h4>
+                            <p>Track attendance, view volunteer locations, and manage communications.</p>
                         </div>
                     </div>
                 </div>
@@ -194,13 +279,96 @@
         <p style="color: white; font-size: 1.2rem; margin-bottom: 30px; opacity: 0.9;">
             Join thousands of users who trust our platform for political event management.
         </p>
-        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
-            <i class="fas fa-rocket"></i> Start Now
-        </a>
+        <div class="cta-buttons" style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-user-plus"></i> Register as Volunteer
+            </a>
+            <a href="{{ url_for('register_political_party') }}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-landmark"></i> Register Political Party
+            </a>
+        </div>
     </div>
 </section>
 
 <style>
+.login-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.login-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.login-card:hover {
+    transform: translateY(-5px);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.login-form .form-group {
+    margin-bottom: 20px;
+}
+
+.login-form .form-control {
+    border: 2px solid #e1e5e9;
+    border-radius: 10px;
+    padding: 12px 15px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.login-form .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.login-form .form-label {
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.login-form .form-label i {
+    margin-right: 8px;
+    color: #667eea;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #764ba2, #667eea);
+    border: none;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.btn-primary:hover, .btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
 .step {
     display: flex;
     align-items: flex-start;
@@ -260,6 +428,15 @@
     .hero-buttons .btn {
         margin-right: 0;
         width: 200px;
+    }
+
+    .login-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .login-card {
+        padding: 20px;
     }
 }
 </style>

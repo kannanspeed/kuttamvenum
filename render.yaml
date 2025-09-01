@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.12
@@ -14,12 +14,31 @@ services:
         generateValue: true
       - key: ENCRYPTION_KEY
         generateValue: true
+      - key: DATA_DIR
+        value: /var/persistent/data
+      - key: UPLOAD_FOLDER
+        value: /var/persistent/secure_uploads
+      # Auth0 configuration
+      - key: AUTH0_DOMAIN
+        sync: false
+      - key: AUTH0_CLIENT_ID
+        sync: false
+      - key: AUTH0_CLIENT_SECRET
+        sync: false
+      - key: AUTH0_CALLBACK_URL
+        value: https://political-event-management.onrender.com/callback
+      - key: AUTH0_LOGOUT_URL
+        value: https://political-event-management.onrender.com
       - key: MAIL_SERVER
         value: smtp.gmail.com
       - key: MAIL_PORT
         value: 587
       - key: MAIL_USE_TLS
         value: true
+    disk:
+      name: persistent-data
+      mountPath: /var/persistent
+      sizeGB: 1
       - key: MAIL_USERNAME
         value: your-email@gmail.com
       - key: MAIL_PASSWORD

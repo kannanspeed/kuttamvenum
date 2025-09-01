@@ -107,13 +107,13 @@
     </div>
 </div>
 
-<!-- Pending Users Section -->
-{% if pending_users %}
+<!-- Pending Normal Users Section -->
+{% if pending_normal_users %}
 <div class="pending-users-section mb-4">
     <div class="card">
         <div class="d-flex justify-between align-center mb-3">
             <h3 style="color: #333; margin: 0;">
-                <i class="fas fa-clock"></i> Pending User Approvals ({{ pending_users|length }})
+                <i class="fas fa-user"></i> Pending Volunteer Approvals ({{ pending_normal_users|length }})
             </h3>
             <a href="{{ url_for('admin_users') }}" class="btn btn-primary">
                 View All Users
@@ -121,7 +121,7 @@
         </div>
         
         <div class="pending-users-grid">
-            {% for user in pending_users[:3] %}
+            {% for user in pending_normal_users[:3] %}
                 <div class="user-review-card">
                     <div class="user-info">
                         <div class="user-avatar">
@@ -156,11 +156,11 @@
                         
                         <div class="user-actions">
                             <a href="{{ url_for('approve_user', user_id=user.id) }}" 
-                               class="btn btn-success" onclick="return confirm('Approve this user?')">
+                               class="btn btn-success" onclick="return confirm('Approve this volunteer?')">
                                 <i class="fas fa-check"></i> Approve
                             </a>
                             <a href="{{ url_for('reject_user', user_id=user.id) }}" 
-                               class="btn btn-danger" onclick="return confirm('Reject this user?')">
+                               class="btn btn-danger" onclick="return confirm('Reject this volunteer?')">
                                 <i class="fas fa-times"></i> Reject
                             </a>
                         </div>
@@ -175,10 +175,92 @@
             {% endfor %}
         </div>
         
-        {% if pending_users|length > 3 %}
+        {% if pending_normal_users|length > 3 %}
             <div class="text-center mt-3">
                 <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">
-                    View All {{ pending_users|length }} Pending Users
+                    View All {{ pending_normal_users|length }} Pending Volunteers
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Pending Political Parties Section -->
+{% if pending_political_parties %}
+<div class="pending-users-section mb-4">
+    <div class="card">
+        <div class="d-flex justify-between align-center mb-3">
+            <h3 style="color: #333; margin: 0;">
+                <i class="fas fa-landmark"></i> Pending Political Party Approvals ({{ pending_political_parties|length }})
+            </h3>
+            <a href="{{ url_for('admin_users') }}" class="btn btn-primary">
+                View All Users
+            </a>
+        </div>
+        
+        <div class="pending-users-grid">
+            {% for user in pending_political_parties[:3] %}
+                <div class="user-review-card">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <i class="fas fa-landmark"></i>
+                        </div>
+                        <div class="user-details">
+                            <h4>{{ user.name }}</h4>
+                            <p><i class="fas fa-envelope"></i> {{ user.email }}</p>
+                            <p><i class="fas fa-phone"></i> {{ user.phone }}</p>
+                            <p><i class="fas fa-map-marker-alt"></i> {{ user.location }}</p>
+                            {% if user.party_name %}
+                                <p><i class="fas fa-flag"></i> {{ user.party_name }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if user.adhar_front and user.adhar_back and user.selfie %}
+                        <div class="user-documents">
+                            <div class="document-preview">
+                                <img src="{{ url_for('static', filename='uploads/' + user.adhar_front) }}" 
+                                     alt="Aadhaar Front" onclick="openImageModal(this.src)">
+                                <small>Aadhaar Front</small>
+                            </div>
+                            <div class="document-preview">
+                                <img src="{{ url_for('static', filename='uploads/' + user.adhar_back) }}" 
+                                     alt="Aadhaar Back" onclick="openImageModal(this.src)">
+                                <small>Aadhaar Back</small>
+                            </div>
+                            <div class="document-preview">
+                                <img src="{{ url_for('static', filename='uploads/' + user.selfie) }}" 
+                                     alt="Selfie" onclick="openImageModal(this.src)">
+                                <small>Selfie</small>
+                            </div>
+                        </div>
+                        
+                        <div class="user-actions">
+                            <a href="{{ url_for('approve_user', user_id=user.id) }}" 
+                               class="btn btn-success" onclick="return confirm('Approve this political party?')">
+                                <i class="fas fa-check"></i> Approve
+                            </a>
+                            <a href="{{ url_for('reject_user', user_id=user.id) }}" 
+                               class="btn btn-danger" onclick="return confirm('Reject this political party?')">
+                                <i class="fas fa-times"></i> Reject
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="user-actions">
+                            <span class="status-badge status-pending">
+                                <i class="fas fa-exclamation-triangle"></i> Documents Pending
+                            </span>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+        
+        {% if pending_political_parties|length > 3 %}
+            <div class="text-center mt-3">
+                <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">
+                    View All {{ pending_political_parties|length }} Pending Political Parties
                 </a>
             </div>
         {% endif %}
