@@ -39,9 +39,25 @@ services:
       name: persistent-data
       mountPath: /var/persistent
       sizeGB: 1
-      - key: MAIL_USERNAME
-        value: your-email@gmail.com
-      - key: MAIL_PASSWORD
-        value: your-app-password
-      - key: MAIL_DEFAULT_SENDER
-        value: your-email@gmail.com
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      

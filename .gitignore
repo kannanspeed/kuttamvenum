@@ -43,6 +43,6 @@ secure_uploads/
 .env.local
 .env.production
 
-# Data files (keep for deployment but ignore changes)
-# data/
-# app.log
+# Data files and logs (ignore in git)
+data/
+app.log
